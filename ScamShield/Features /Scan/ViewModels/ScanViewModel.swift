@@ -11,6 +11,18 @@ class ScanViewModel: ObservableObject {
     @Published var contextWhoFor: ContextWhoFor = .selfUser
     @Published var fromKnownContact: Bool = false
 
+    // MARK: - Contact Detection State
+
+    @Published var detectedContactName: String?
+    @Published var contactsPermissionStatus: ContactsPermissionStatus = .notDetermined
+    @Published var senderPhoneNumber: String?
+
+    enum ContactsPermissionStatus {
+        case notDetermined
+        case authorized
+        case denied
+    }
+
     // MARK: - Scan State
 
     @Published var scanState: ScanState = .idle
@@ -117,12 +129,97 @@ class ScanViewModel: ObservableObject {
         messageText = ""
         contextWhoFor = .selfUser
         fromKnownContact = false
+        detectedContactName = nil
+        senderPhoneNumber = nil
         scanState = .idle
     }
 
     /// Pre-populate with text (from Share Extension)
     func prePopulate(with text: String) {
         messageText = text
+        // Try to detect contact from the message
+        Task {
+            await checkForKnownContact(phoneNumber: nil, messageText: text)
+        }
+    }
+
+    /// Pre-populate with text and sender phone number (from Share Extension)
+    func prePopulate(with text: String, senderPhone: String?) {
+        messageText = text
+        senderPhoneNumber = senderPhone
+        // Try to detect contact
+        Task {
+            await checkForKnownContact(phoneNumber: senderPhone, messageText: text)
+        }
+    }
+
+    // MARK: - Contact Detection
+
+    /// Check contacts permission status on launch
+    func checkContactsPermission() {
+        let status = ContactsManager.shared.authorizationStatus
+        switch status {
+        case .authorized:
+            contactsPermissionStatus = .authorized
+        case .denied, .restricted:
+            contactsPermissionStatus = .denied
+        default:
+            contactsPermissionStatus = .notDetermined
+        }
+    }
+
+    /// Request contacts permission
+    func requestContactsPermission() async -> Bool {
+        let granted = await ContactsManager.shared.requestPermission()
+        contactsPermissionStatus = granted ? .authorized : .denied
+        return granted
+    }
+
+    /// Check if message is from a known contact
+    func checkForKnownContact(phoneNumber: String? = nil, messageText: String? = nil) async {
+        // First ensure we have permission
+        var hasPermission = ContactsManager.shared.hasPermission
+        if !hasPermission {
+            // Try to request permission
+            hasPermission = await requestContactsPermission()
+        }
+
+        guard hasPermission else { return }
+
+        // Try the provided phone number first
+        if let phone = phoneNumber, !phone.isEmpty {
+            if let name = ContactsManager.shared.lookupContact(phoneNumber: phone) {
+                detectedContactName = name
+                fromKnownContact = true
+                #if DEBUG
+                print("📱 Detected known contact: \(name)")
+                #endif
+                return
+            }
+        }
+
+        // Try to extract phone number from message text
+        if let text = messageText ?? self.messageText.nilIfEmpty,
+           let extractedPhone = ContactsManager.shared.extractPhoneNumber(from: text) {
+            if let name = ContactsManager.shared.lookupContact(phoneNumber: extractedPhone) {
+                detectedContactName = name
+                fromKnownContact = true
+                #if DEBUG
+                print("📱 Detected known contact from message: \(name)")
+                #endif
+                return
+            }
+        }
+
+        // No contact found
+        detectedContactName = nil
+        // Don't auto-set fromKnownContact to false - let user control it
+    }
+
+    /// Clear contact detection
+    func clearContactDetection() {
+        detectedContactName = nil
+        senderPhoneNumber = nil
     }
 
     // MARK: - Widget Support
@@ -152,5 +249,15 @@ class ScanViewModel: ObservableObject {
 
         // Reload widget timelines
         WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+// MARK: - String Extension
+
+extension String {
+    /// Returns nil if the string is empty or whitespace-only
+    var nilIfEmpty: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

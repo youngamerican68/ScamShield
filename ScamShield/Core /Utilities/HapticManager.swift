@@ -70,10 +70,15 @@ final class HapticManager {
         impactLight.impactOccurred()
     }
 
-    // MARK: - Errors
+    // MARK: - Notifications
 
     /// When an error occurs
     func error() {
         notification.notificationOccurred(.error)
+    }
+
+    /// When a success action occurs
+    func success() {
+        notification.notificationOccurred(.success)
     }
 }

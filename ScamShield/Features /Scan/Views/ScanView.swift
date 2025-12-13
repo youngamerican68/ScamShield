@@ -1,60 +1,103 @@
 import SwiftUI
+import UIKit
 
 /// Main scan screen - MVP version
 struct ScanView: View {
     @StateObject private var viewModel = ScanViewModel()
     @EnvironmentObject var appState: AppState
+    @Environment(\.scenePhase) private var scenePhase
     @FocusState private var isTextFieldFocused: Bool
+    @State private var showSettings = false
+
+    // Clipboard tracking - persist across launches to avoid repeat prompting
+    @AppStorage("pasteboardLastHandledChangeCount") private var lastHandledChangeCount: Int = 0
+    @AppStorage("pasteboardLastDismissedChangeCount") private var lastDismissedChangeCount: Int = 0
+    @State private var showClipboardBanner = false
+    @State private var clipboardBannerState: ClipboardBannerState = .ready
+
+    private enum ClipboardBannerState {
+        case ready
+        case scanning
+        case error
+    }
 
     var body: some View {
-        ZStack {
-            // Background
-            backgroundView
+        NavigationStack {
+            ZStack {
+                // Background
+                backgroundView
 
-            // Content based on state
-            Group {
-                switch viewModel.scanState {
-                case .idle:
-                    scanInputView
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .leading).combined(with: .opacity),
-                            removal: .move(edge: .leading).combined(with: .opacity)
-                        ))
+                // Content based on state
+                Group {
+                    switch viewModel.scanState {
+                    case .idle:
+                        scanInputView
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .leading).combined(with: .opacity),
+                                removal: .move(edge: .leading).combined(with: .opacity)
+                            ))
 
-                case .scanning(let phase):
-                    ScanningView(phase: phase)
-                        .transition(.opacity)
+                    case .scanning(let phase):
+                        ScanningView(phase: phase)
+                            .transition(.opacity)
 
-                case .complete(let result):
-                    ResultsView(result: result, onScanAnother: viewModel.reset)
-                        .transition(.asymmetric(
-                            insertion: .move(edge: .trailing).combined(with: .opacity),
-                            removal: .move(edge: .trailing).combined(with: .opacity)
-                        ))
+                    case .complete(let result):
+                        ResultsView(result: result, onScanAnother: viewModel.reset)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: .trailing).combined(with: .opacity),
+                                removal: .move(edge: .trailing).combined(with: .opacity)
+                            ))
 
-                case .error(let message):
-                    errorView(message: message)
-                        .transition(.opacity)
+                    case .error(let message):
+                        errorView(message: message)
+                            .transition(.opacity)
+                    }
                 }
             }
-            .animation(.spring(response: 0.5, dampingFraction: 0.8), value: viewModel.scanState)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundColor(.cloud)
+                    }
+                }
+            }
+            .sheet(isPresented: $showSettings) {
+                NavigationStack {
+                    SettingsView()
+                }
+            }
         }
         .onAppear {
+            viewModel.checkContactsPermission()
             handleSharedContent()
+            checkClipboardAvailability()
+        }
+        .onChange(of: appState.sharedText) { newText in
+            if newText != nil {
+                handleSharedContent()
+            }
+        }
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .active {
+                checkClipboardAvailability()
+            }
+        }
+        .onChange(of: viewModel.scanState) { newState in
+            // Re-check clipboard when returning to idle (after "Scan Another")
+            if case .idle = newState {
+                checkClipboardAvailability()
+            }
         }
     }
 
     // MARK: - Background
 
     private var backgroundView: some View {
-        ZStack {
-            AppGradients.nocturneUpper
-                .ignoresSafeArea()
-
-            StarFieldView(starCount: 30)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-        }
+        AppGradients.nocturneUpper
+            .ignoresSafeArea()
     }
 
     // MARK: - Scan Input View
@@ -62,17 +105,17 @@ struct ScanView: View {
     private var scanInputView: some View {
         ScrollView {
             VStack(spacing: 24) {
+                // Clipboard Banner (shown above header when available)
+                if showClipboardBanner {
+                    clipboardBannerView
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
                 // Header
                 headerSection
 
                 // Message Input
                 messageInputSection
-
-                // Context Selector
-                contextSection
-
-                // Known Contact Toggle
-                knownContactSection
 
                 // Scan Button
                 scanButtonSection
@@ -82,9 +125,91 @@ struct ScanView: View {
             }
             .padding()
         }
+        .scrollBounceBehavior(.basedOnSize)
         .onTapGesture {
             isTextFieldFocused = false
         }
+    }
+
+    // MARK: - Clipboard Banner (Primary CTA for elderly users)
+
+    private var clipboardBannerView: some View {
+        VStack(spacing: 12) {
+            // Main scan button - state-dependent content
+            Button {
+                scanFromClipboard()
+            } label: {
+                HStack(spacing: 12) {
+                    switch clipboardBannerState {
+                    case .ready:
+                        Image(systemName: "doc.on.clipboard.fill")
+                            .font(.system(size: 24))
+                        Text("Scan Message I Copied")
+                            .font(.system(size: 18, weight: .semibold))
+
+                    case .scanning:
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .midnight))
+                        Text("Scanning...")
+                            .font(.system(size: 18, weight: .semibold))
+
+                    case .error:
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .font(.system(size: 24))
+                        Text("Try Again")
+                            .font(.system(size: 18, weight: .semibold))
+                    }
+                }
+                .foregroundColor(.midnight)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(clipboardBannerState == .error ? Color.verdictWarning : Color.sunrise)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .disabled(clipboardBannerState == .scanning)
+
+            // State-dependent helper text
+            switch clipboardBannerState {
+            case .ready:
+                Text("Tip: In Messages, press and hold → Copy")
+                    .font(.system(size: 13))
+                    .foregroundColor(.cloud.opacity(0.6))
+
+            case .scanning:
+                Text("Reading your copied message...")
+                    .font(.system(size: 13))
+                    .foregroundColor(.cloud.opacity(0.6))
+
+            case .error:
+                Text("Couldn't read the copied text. Please copy again.")
+                    .font(.system(size: 13))
+                    .foregroundColor(.verdictWarning.opacity(0.8))
+            }
+
+            // Dismiss option (small, secondary) - hidden during scanning
+            if clipboardBannerState != .scanning {
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        lastDismissedChangeCount = UIPasteboard.general.changeCount
+                        showClipboardBanner = false
+                        clipboardBannerState = .ready
+                    }
+                } label: {
+                    Text("Dismiss")
+                        .font(.system(size: 14))
+                        .foregroundColor(.cloud.opacity(0.5))
+                }
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke((clipboardBannerState == .error ? Color.verdictWarning : Color.sunrise).opacity(0.4), lineWidth: 1)
+                )
+        )
     }
 
     // MARK: - Header
@@ -124,6 +249,14 @@ struct ScanView: View {
                     .font(AppTypography.body)
                     .foregroundColor(.starlight)
                     .padding()
+                    .onChange(of: viewModel.messageText) { newText in
+                        // Auto-detect contacts when text is pasted
+                        if !newText.isEmpty {
+                            Task {
+                                await viewModel.checkForKnownContact(messageText: newText)
+                            }
+                        }
+                    }
 
                 // Character count
                 HStack {
@@ -149,77 +282,6 @@ struct ScanView: View {
             },
             alignment: .topLeading
         )
-    }
-
-    // MARK: - Context Selector
-
-    private var contextSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Who received this message?")
-                .font(AppTypography.caption)
-                .foregroundColor(.cloud.opacity(0.7))
-
-            HStack(spacing: 8) {
-                ForEach(ContextWhoFor.allCases, id: \.self) { context in
-                    contextButton(for: context)
-                }
-            }
-        }
-    }
-
-    private func contextButton(for context: ContextWhoFor) -> some View {
-        Button {
-            HapticManager.shared.selectionChanged()
-            viewModel.contextWhoFor = context
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: context.icon)
-                    .font(.caption)
-                Text(context.displayName)
-                    .font(AppTypography.caption)
-            }
-            .foregroundColor(viewModel.contextWhoFor == context ? .midnight : .cloud)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                viewModel.contextWhoFor == context
-                    ? AppGradients.sunriseToEmber
-                    : LinearGradient(colors: [Color.glassWhite], startPoint: .leading, endPoint: .trailing)
-            )
-            .cornerRadius(20)
-            .overlay(
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(
-                        viewModel.contextWhoFor == context ? Color.clear : Color.glassBorder,
-                        lineWidth: 1
-                    )
-            )
-        }
-    }
-
-    // MARK: - Known Contact Toggle
-
-    private var knownContactSection: some View {
-        GlassCard {
-            Toggle(isOn: $viewModel.fromKnownContact) {
-                HStack(spacing: 8) {
-                    Image(systemName: "person.fill.checkmark")
-                        .foregroundColor(.sunrise)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("From a known contact")
-                            .font(AppTypography.body)
-                            .foregroundColor(.starlight)
-                        Text("Saved in your phone or familiar sender")
-                            .font(AppTypography.caption)
-                            .foregroundColor(.cloud.opacity(0.6))
-                    }
-                }
-            }
-            .tint(.sunrise)
-            .onChange(of: viewModel.fromKnownContact) { _ in
-                HapticManager.shared.selectionChanged()
-            }
-        }
     }
 
     // MARK: - Scan Button
@@ -284,19 +346,115 @@ struct ScanView: View {
         .padding()
     }
 
-    // MARK: - Handle Shared Content
+    // MARK: - Handle Shared Content (from Share Extension)
 
     private func handleSharedContent() {
-        if let text = appState.sharedText {
-            viewModel.prePopulate(with: text)
-            appState.sharedText = nil
+        guard let text = appState.sharedText,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
 
-            if appState.shouldAutoScan {
-                appState.shouldAutoScan = false
-                Task {
-                    await viewModel.startScan()
-                }
+        // Populate text field
+        viewModel.prePopulate(with: String(text.prefix(8000)), senderPhone: nil)
+
+        // Clear app state
+        let shouldAutoScan = appState.shouldAutoScan
+        appState.sharedText = nil
+        appState.shouldAutoScan = false
+
+        // Hide clipboard banner since we have content
+        showClipboardBanner = false
+
+        // Auto-scan only for share extension (not clipboard)
+        if shouldAutoScan {
+            Task {
+                try? await Task.sleep(nanoseconds: 300_000_000) // Brief delay for UI
+                await viewModel.startScan()
             }
+        }
+    }
+
+    // MARK: - Clipboard Detection (NO read on launch, just availability check)
+
+    private func checkClipboardAvailability() {
+        // Don't check if we're not in idle state or already have text
+        guard case .idle = viewModel.scanState,
+              viewModel.messageText.isEmpty else {
+            showClipboardBanner = false
+            return
+        }
+
+        // Non-invasive check: does pasteboard have strings? (doesn't read content)
+        guard UIPasteboard.general.hasStrings else {
+            showClipboardBanner = false
+            return
+        }
+
+        // Check change count to avoid repeat prompts
+        let currentChangeCount = UIPasteboard.general.changeCount
+        if currentChangeCount == lastHandledChangeCount ||
+           currentChangeCount == lastDismissedChangeCount {
+            showClipboardBanner = false
+            return
+        }
+
+        // Show banner (without reading clipboard content yet)
+        withAnimation(.easeOut(duration: 0.3)) {
+            clipboardBannerState = .ready
+            showClipboardBanner = true
+        }
+    }
+
+    // MARK: - Scan from Clipboard (reads content only when user taps)
+
+    private func scanFromClipboard() {
+        // If in error state, user tapped "Try Again" - reset to ready first
+        if clipboardBannerState == .error {
+            withAnimation(.easeOut(duration: 0.15)) {
+                clipboardBannerState = .ready
+            }
+            return
+        }
+
+        // Immediate visual feedback - show scanning state
+        withAnimation(.easeOut(duration: 0.15)) {
+            clipboardBannerState = .scanning
+        }
+
+        let pb = UIPasteboard.general
+        lastHandledChangeCount = pb.changeCount
+
+        // Debug logging
+        print("[Clipboard] hasStrings: \(pb.hasStrings)")
+        print("[Clipboard] changeCount: \(pb.changeCount)")
+        print("[Clipboard] string: \(pb.string ?? "nil")")
+
+        // Read clipboard content ONLY after user explicitly taps
+        guard let text = pb.string,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            print("[Clipboard] ERROR: Failed to read clipboard or empty content")
+            // Show error state with friendly message
+            withAnimation(.easeOut(duration: 0.2)) {
+                clipboardBannerState = .error
+            }
+            return
+        }
+
+        print("[Clipboard] SUCCESS: Read \(text.count) characters")
+
+        // Populate text field first
+        viewModel.prePopulate(with: String(text.prefix(8000)), senderPhone: nil)
+
+        // Hide banner to reveal the populated text field
+        withAnimation {
+            showClipboardBanner = false
+            clipboardBannerState = .ready
+        }
+
+        // Give user 1.5 seconds to see their message before scanning
+        Task {
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            await viewModel.startScan()
         }
     }
 }
