@@ -5,14 +5,14 @@ import Foundation
 /// API environments for the app
 /// Switch between dev/staging/prod easily
 enum APIEnvironment {
-    case dev        // localhost:3001 (simulator only)
+    case dev        // localhost:3002 (simulator only)
     case staging    // Mac LAN IP (physical device testing)
     case prod       // Production server (future)
 
     var baseURL: URL {
         switch self {
         case .dev:
-            return URL(string: "http://localhost:3001")!
+            return URL(string: "http://localhost:3002")!
         case .staging:
             // Replace with your Mac's local IP when testing on device
             // Find via: System Settings → Wi-Fi → Details → IP Address

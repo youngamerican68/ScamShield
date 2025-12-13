@@ -6,8 +6,53 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		285A4DA52EEBBF2500278A0D /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 285A4DA32EEBBF2500278A0D /* ShareViewController.swift */; };
+		285A4DB12EEBBF2500278A0D /* ScamShieldShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 285A4DA12EEBBF2500278A0D /* ScamShieldShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		285A4DC02EECAA0000278A0D /* ScamShieldWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 285A4DBE2EECAA0000278A0D /* ScamShieldWidget.swift */; };
+		285A4DC32EECAA0000278A0D /* ScamShieldWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 285A4DBC2EECAA0000278A0D /* ScamShieldWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		285A4DAE2EEBBF2500278A0D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 285A4D892EEBBF2300278A0D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 285A4DAA2EEBBF2500278A0D;
+			remoteInfo = ScamShieldShare;
+		};
+		285A4DC12EECAA0000278A0D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 285A4D892EEBBF2300278A0D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 285A4DBB2EECAA0000278A0D;
+			remoteInfo = ScamShieldWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		285A4DB02EEBBF2500278A0D /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				285A4DB12EEBBF2500278A0D /* ScamShieldShare.appex in Embed Foundation Extensions */,
+				285A4DC32EECAA0000278A0D /* ScamShieldWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		285A4D912EEBBF2300278A0D /* ScamShield.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ScamShield.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		285A4DA12EEBBF2500278A0D /* ScamShieldShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScamShieldShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		285A4DA32EEBBF2500278A0D /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		285A4DA42EEBBF2500278A0D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		285A4DBC2EECAA0000278A0D /* ScamShieldWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ScamShieldWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		285A4DBE2EECAA0000278A0D /* ScamShieldWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScamShieldWidget.swift; sourceTree = "<group>"; };
+		285A4DBF2EECAA0000278A0D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -26,6 +71,20 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		285A4DA82EEBBF2500278A0D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		285A4DB82EECAA0000278A0D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -33,6 +92,8 @@
 			isa = PBXGroup;
 			children = (
 				285A4D932EEBBF2300278A0D /* ScamShield */,
+				285A4DA22EEBBF2500278A0D /* ScamShieldShare */,
+				285A4DBD2EECAA0000278A0D /* ScamShieldWidget */,
 				285A4D922EEBBF2300278A0D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +102,28 @@
 			isa = PBXGroup;
 			children = (
 				285A4D912EEBBF2300278A0D /* ScamShield.app */,
+				285A4DA12EEBBF2500278A0D /* ScamShieldShare.appex */,
+				285A4DBC2EECAA0000278A0D /* ScamShieldWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		285A4DA22EEBBF2500278A0D /* ScamShieldShare */ = {
+			isa = PBXGroup;
+			children = (
+				285A4DA32EEBBF2500278A0D /* ShareViewController.swift */,
+				285A4DA42EEBBF2500278A0D /* Info.plist */,
+			);
+			path = ScamShieldShare;
+			sourceTree = "<group>";
+		};
+		285A4DBD2EECAA0000278A0D /* ScamShieldWidget */ = {
+			isa = PBXGroup;
+			children = (
+				285A4DBE2EECAA0000278A0D /* ScamShieldWidget.swift */,
+				285A4DBF2EECAA0000278A0D /* Info.plist */,
+			);
+			path = ScamShieldWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,10 +136,13 @@
 				285A4D8D2EEBBF2300278A0D /* Sources */,
 				285A4D8E2EEBBF2300278A0D /* Frameworks */,
 				285A4D8F2EEBBF2300278A0D /* Resources */,
+				285A4DB02EEBBF2500278A0D /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				285A4DAF2EEBBF2500278A0D /* PBXTargetDependency */,
+				285A4DC22EECAA0000278A0D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				285A4D932EEBBF2300278A0D /* ScamShield */,
@@ -69,6 +153,44 @@
 			productName = ScamShield;
 			productReference = 285A4D912EEBBF2300278A0D /* ScamShield.app */;
 			productType = "com.apple.product-type.application";
+		};
+		285A4DAA2EEBBF2500278A0D /* ScamShieldShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 285A4DAD2EEBBF2500278A0D /* Build configuration list for PBXNativeTarget "ScamShieldShare" */;
+			buildPhases = (
+				285A4DA72EEBBF2500278A0D /* Sources */,
+				285A4DA82EEBBF2500278A0D /* Frameworks */,
+				285A4DA92EEBBF2500278A0D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ScamShieldShare;
+			packageProductDependencies = (
+			);
+			productName = ScamShieldShare;
+			productReference = 285A4DA12EEBBF2500278A0D /* ScamShieldShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		285A4DBB2EECAA0000278A0D /* ScamShieldWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 285A4DC42EECAA0000278A0D /* Build configuration list for PBXNativeTarget "ScamShieldWidgetExtension" */;
+			buildPhases = (
+				285A4DB72EECAA0000278A0D /* Sources */,
+				285A4DB82EECAA0000278A0D /* Frameworks */,
+				285A4DB92EECAA0000278A0D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ScamShieldWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = ScamShieldWidgetExtension;
+			productReference = 285A4DBC2EECAA0000278A0D /* ScamShieldWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -81,6 +203,12 @@
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					285A4D902EEBBF2300278A0D = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					285A4DAA2EEBBF2500278A0D = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					285A4DBB2EECAA0000278A0D = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -100,12 +228,28 @@
 			projectRoot = "";
 			targets = (
 				285A4D902EEBBF2300278A0D /* ScamShield */,
+				285A4DAA2EEBBF2500278A0D /* ScamShieldShare */,
+				285A4DBB2EECAA0000278A0D /* ScamShieldWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		285A4D8F2EEBBF2300278A0D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		285A4DA92EEBBF2500278A0D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		285A4DB92EECAA0000278A0D /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +266,36 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		285A4DA72EEBBF2500278A0D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				285A4DA52EEBBF2500278A0D /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		285A4DB72EECAA0000278A0D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				285A4DC02EECAA0000278A0D /* ScamShieldWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		285A4DAF2EEBBF2500278A0D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 285A4DAA2EEBBF2500278A0D /* ScamShieldShare */;
+			targetProxy = 285A4DAE2EEBBF2500278A0D /* PBXContainerItemProxy */;
+		};
+		285A4DC22EECAA0000278A0D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 285A4DBB2EECAA0000278A0D /* ScamShieldWidgetExtension */;
+			targetProxy = 285A4DC12EECAA0000278A0D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		285A4D9A2EEBBF2500278A0D /* Debug */ = {
@@ -177,7 +350,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -234,7 +407,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 26.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -249,27 +422,21 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ScamShield/ScamShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "ScamShield-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = scamshield.ScamShield;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scamshield.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -280,27 +447,125 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = ScamShield/ScamShield.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "ScamShield-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = scamshield.ScamShield;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scamshield.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		285A4DAB2EEBBF2500278A0D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScamShieldShare/ScamShieldShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScamShieldShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Scan for Scams";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scamshield.app.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		285A4DAC2EEBBF2500278A0D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ScamShieldShare/ScamShieldShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScamShieldShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Scan for Scams";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scamshield.app.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		285A4DC52EECAA0000278A0D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ScamShieldWidget/ScamShieldWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScamShieldWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Scam Shield Widget";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scamshield.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		285A4DC62EECAA0000278A0D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = ScamShieldWidget/ScamShieldWidget.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ScamShieldWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Scam Shield Widget";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.scamshield.app.widget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -323,6 +588,24 @@
 			buildConfigurations = (
 				285A4D9D2EEBBF2500278A0D /* Debug */,
 				285A4D9E2EEBBF2500278A0D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		285A4DAD2EEBBF2500278A0D /* Build configuration list for PBXNativeTarget "ScamShieldShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				285A4DAB2EEBBF2500278A0D /* Debug */,
+				285A4DAC2EEBBF2500278A0D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		285A4DC42EECAA0000278A0D /* Build configuration list for PBXNativeTarget "ScamShieldWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				285A4DC52EECAA0000278A0D /* Debug */,
+				285A4DC62EECAA0000278A0D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

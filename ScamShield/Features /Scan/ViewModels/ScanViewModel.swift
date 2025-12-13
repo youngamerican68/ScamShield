@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import WidgetKit
 
 /// ViewModel for the scan flow
 @MainActor
@@ -92,6 +93,9 @@ class ScanViewModel: ObservableObject {
             HapticManager.shared.verdictReveal(result.verdict)
             scanState = .complete(result)
 
+            // Save to shared UserDefaults for widget
+            saveResultForWidget(result)
+
             #if DEBUG
             print("✅ Scan complete - verdict: \(result.verdict.rawValue), confidence: \(result.confidencePercent)")
             #endif
@@ -119,5 +123,34 @@ class ScanViewModel: ObservableObject {
     /// Pre-populate with text (from Share Extension)
     func prePopulate(with text: String) {
         messageText = text
+    }
+
+    // MARK: - Widget Support
+
+    /// Saves the last scan result to shared UserDefaults for the widget
+    private func saveResultForWidget(_ result: ScamCheckResult) {
+        guard let defaults = UserDefaults(suiteName: "group.com.scamshield.shared") else {
+            #if DEBUG
+            print("⚠️ Could not access shared UserDefaults")
+            #endif
+            return
+        }
+
+        // Create a simple struct that matches what the widget expects
+        let widgetResult = [
+            "verdict": result.verdict.rawValue,
+            "summary": result.summary,
+            "timestamp": ISO8601DateFormatter().string(from: Date())
+        ]
+
+        if let data = try? JSONEncoder().encode(widgetResult) {
+            defaults.set(data, forKey: "lastScanResult")
+            #if DEBUG
+            print("📱 Saved result for widget")
+            #endif
+        }
+
+        // Reload widget timelines
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

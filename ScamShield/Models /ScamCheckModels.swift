@@ -142,17 +142,17 @@ enum ScanState: Equatable {
 
 /// Phases during the scanning animation
 enum ScanPhase: String, CaseIterable {
-    case searching = "Searching for scam patterns..."
-    case analyzing = "Analyzing message content..."
-    case verifying = "Cross-referencing databases..."
-    case finalizing = "Generating your verdict..."
+    case searching = "Shield activating..."
+    case analyzing = "Guardian angel on duty..."
+    case verifying = "Scanning for red flags..."
+    case finalizing = "Locking in your verdict..."
 
     var icon: String {
         switch self {
-        case .searching: return "magnifyingglass"
-        case .analyzing: return "doc.text.magnifyingglass"
-        case .verifying: return "checkmark.circle"
-        case .finalizing: return "shield.checkmark"
+        case .searching: return "shield.fill"
+        case .analyzing: return "sparkles"
+        case .verifying: return "eye.fill"
+        case .finalizing: return "lock.shield.fill"
         }
     }
 }

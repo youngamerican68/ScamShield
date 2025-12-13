@@ -10,6 +10,21 @@ struct ResultsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                // Back Button
+                HStack {
+                    Button(action: onScanAnother) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("New Scan")
+                                .font(AppTypography.body)
+                        }
+                        .foregroundColor(.sunrise)
+                    }
+                    Spacer()
+                }
+                .padding(.bottom, 8)
+
                 // Verdict Card
                 verdictCard
                     .modifier(StaggeredFadeIn(index: 0, isAnimated: isAnimated))
@@ -144,7 +159,7 @@ struct ResultsView: View {
                             Image(systemName: "exclamationmark.circle.fill")
                                 .font(.caption)
                                 .foregroundColor(.verdictWarning)
-                            Text(tactic)
+                            Text(formatTactic(tactic))
                                 .font(AppTypography.body)
                                 .foregroundColor(.cloud)
                         }
@@ -198,6 +213,16 @@ struct ResultsView: View {
             // SecondaryButton("Share Result", icon: "square.and.arrow.up") { }
         }
         .padding(.top, 8)
+    }
+
+    // MARK: - Helpers
+
+    /// Formats snake_case tactics to Title Case
+    /// e.g., "authority_impersonation" -> "Authority Impersonation"
+    private func formatTactic(_ tactic: String) -> String {
+        tactic
+            .replacingOccurrences(of: "_", with: " ")
+            .capitalized
     }
 }
 
