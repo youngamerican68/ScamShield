@@ -156,3 +156,95 @@ enum ScanPhase: String, CaseIterable {
         }
     }
 }
+
+// MARK: - Scan History Models
+
+/// Source of the scan
+enum ScanSource: String, Codable {
+    case emailForward = "email_forward"
+    case clipboard = "clipboard"
+    case shareExtension = "share_extension"
+    case manual = "manual"
+
+    var displayName: String {
+        switch self {
+        case .emailForward: return "Email Forward"
+        case .clipboard: return "Clipboard"
+        case .shareExtension: return "Share"
+        case .manual: return "Manual"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .emailForward: return "envelope.fill"
+        case .clipboard: return "doc.on.clipboard.fill"
+        case .shareExtension: return "square.and.arrow.up.fill"
+        case .manual: return "keyboard.fill"
+        }
+    }
+}
+
+/// A scan record from the history API
+struct ScanHistoryItem: Codable, Identifiable {
+    let id: String
+    let userId: String
+    let source: ScanSource
+    let subjectSnippet: String
+    let fromDomain: String
+    let messageId: String
+    let verdict: String
+    let summary: String
+    let tactics: [String]
+    let safeSteps: [String]
+    let confidence: Double
+    let createdAt: String
+
+    /// Parse verdict string to ScamVerdict enum
+    var verdictEnum: ScamVerdict {
+        ScamVerdict(rawValue: verdict) ?? .suspicious
+    }
+
+    /// Format the date for display
+    var formattedDate: String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = formatter.date(from: createdAt) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.doesRelativeDateFormatting = true
+            displayFormatter.dateStyle = .short
+            displayFormatter.timeStyle = .short
+            return displayFormatter.string(from: date)
+        }
+
+        // Fallback: try without fractional seconds
+        formatter.formatOptions = [.withInternetDateTime]
+        if let date = formatter.date(from: createdAt) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.doesRelativeDateFormatting = true
+            displayFormatter.dateStyle = .short
+            displayFormatter.timeStyle = .short
+            return displayFormatter.string(from: date)
+        }
+
+        return createdAt
+    }
+
+    /// Short preview of the subject/content
+    var previewText: String {
+        if subjectSnippet.isEmpty {
+            return "No subject"
+        }
+        return subjectSnippet
+    }
+}
+
+/// Response from the scan history API
+struct ScanHistoryResponse: Codable {
+    let scans: [ScanHistoryItem]
+    let total: Int
+    let limit: Int
+    let offset: Int
+    let hasMore: Bool
+}

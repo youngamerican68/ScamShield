@@ -20,6 +20,9 @@ struct SettingsView: View {
                     // Header
                     headerSection
 
+                    // Email Scanning Card (Primary feature for elderly)
+                    emailScanningCard
+
                     // SMS Protection Card
                     smsProtectionCard
 
@@ -46,6 +49,7 @@ struct SettingsView: View {
         .onAppear {
             viewModel.checkSMSFilterStatus()
             viewModel.loadTrustedContacts()
+            viewModel.checkScamShieldContactStatus()
         }
     }
 
@@ -57,11 +61,165 @@ struct SettingsView: View {
                 .font(AppTypography.sectionTitle)
                 .foregroundColor(.starlight)
 
-            Text("Configure SMS protection")
+            Text("Set up email and SMS protection")
                 .font(AppTypography.body)
                 .foregroundColor(.cloud)
         }
         .padding(.top, 8)
+    }
+
+    // MARK: - Email Scanning Card
+
+    private var emailScanningCard: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                // Title row
+                HStack {
+                    Image(systemName: "envelope.fill")
+                        .font(.title2)
+                        .foregroundStyle(AppGradients.sunriseToEmber)
+
+                    Text("Email Scanning")
+                        .font(AppTypography.cardTitle)
+                        .foregroundColor(.starlight)
+
+                    Spacer()
+
+                    // Status indicator
+                    emailStatusBadge
+                }
+
+                // Description
+                Text("Forward suspicious emails to check them instantly. Results appear in your scan history.")
+                    .font(AppTypography.body)
+                    .foregroundColor(.cloud)
+
+                // Success message
+                if viewModel.showContactSaveSuccess {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.verdictSafe)
+                        Text("Contact saved! Type \"Scam\" when forwarding emails.")
+                            .font(AppTypography.caption)
+                            .foregroundColor(.verdictSafe)
+                    }
+                    .padding(.vertical, 8)
+                    .transition(.opacity)
+                }
+
+                // Error message
+                if let error = viewModel.contactSaveError {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.circle.fill")
+                            .foregroundColor(.verdictDanger)
+                        Text(error)
+                            .font(AppTypography.caption)
+                            .foregroundColor(.verdictDanger)
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                // Main action - Save to Contacts or Already Saved
+                if viewModel.isScamShieldContactSaved {
+                    // Already saved - show success state
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.verdictSafe)
+                            Text("\"Scam Shield\" saved to Contacts")
+                                .font(AppTypography.body)
+                                .foregroundColor(.verdictSafe)
+                        }
+
+                        Text("To scan an email: tap Forward, type \"Scam\", and send to Scam Shield.")
+                            .font(AppTypography.caption)
+                            .foregroundColor(.cloud.opacity(0.8))
+                    }
+                } else {
+                    // Not saved - show big save button
+                    VStack(alignment: .leading, spacing: 12) {
+                        Divider()
+                            .background(Color.glassBorder)
+
+                        Text("Step 1: Save to Contacts")
+                            .font(AppTypography.body.bold())
+                            .foregroundColor(.starlight)
+
+                        Text("This lets you easily forward emails by typing \"Scam\" in the To: field.")
+                            .font(AppTypography.caption)
+                            .foregroundColor(.cloud.opacity(0.8))
+
+                        Button {
+                            Task {
+                                await viewModel.saveScamShieldContact()
+                            }
+                        } label: {
+                            HStack {
+                                if viewModel.isSavingContact {
+                                    ProgressView()
+                                        .tint(.midnight)
+                                } else {
+                                    Image(systemName: "person.crop.circle.badge.plus")
+                                }
+                                Text(viewModel.isSavingContact ? "Saving..." : "Save \"Scam Shield\" to Contacts")
+                            }
+                            .font(AppTypography.body.bold())
+                            .foregroundColor(.midnight)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(AppGradients.sunriseToEmber)
+                            .cornerRadius(12)
+                        }
+                        .disabled(viewModel.isSavingContact)
+                    }
+                }
+
+                // Copy address option (secondary)
+                Divider()
+                    .background(Color.glassBorder)
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Your scan address:")
+                            .font(AppTypography.caption)
+                            .foregroundColor(.cloud.opacity(0.7))
+                        Text(viewModel.emailScanAddress)
+                            .font(AppTypography.caption.monospaced())
+                            .foregroundColor(.sunrise)
+                    }
+
+                    Spacer()
+
+                    Button {
+                        viewModel.copyEmailAddress()
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .foregroundColor(.sunrise)
+                            .padding(8)
+                            .background(Color.glassWhite)
+                            .cornerRadius(8)
+                    }
+                }
+            }
+        }
+    }
+
+    private var emailStatusBadge: some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(viewModel.isScamShieldContactSaved ? Color.verdictSafe : Color.sunrise)
+                .frame(width: 8, height: 8)
+
+            Text(viewModel.isScamShieldContactSaved ? "Ready" : "Set Up")
+                .font(AppTypography.caption)
+                .foregroundColor(viewModel.isScamShieldContactSaved ? .verdictSafe : .sunrise)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            Capsule()
+                .fill(Color.glassWhite)
+        )
     }
 
     // MARK: - SMS Protection Card
@@ -71,7 +229,7 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 16) {
                 // Title row
                 HStack {
-                    Image(systemName: "message.badge.shield.fill")
+                    Image(systemName: "message.fill")
                         .font(.title2)
                         .foregroundStyle(AppGradients.sunriseToEmber)
 

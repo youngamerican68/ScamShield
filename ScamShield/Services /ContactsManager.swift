@@ -1,11 +1,15 @@
 import Foundation
 import Contacts
+import ContactsUI
 
 /// Manages contact lookups for known contact detection
 class ContactsManager {
     static let shared = ContactsManager()
 
     private let store = CNContactStore()
+
+    // Key for tracking if Scam Shield contact was saved
+    private let scamShieldContactSavedKey = "scamShieldContactSaved"
 
     private init() {}
 
@@ -113,6 +117,99 @@ class ContactsManager {
         }
 
         return nil
+    }
+}
+
+// MARK: - Scam Shield Contact Saving
+
+extension ContactsManager {
+
+    /// Check if Scam Shield contact has been saved
+    var isScamShieldContactSaved: Bool {
+        UserDefaults.standard.bool(forKey: scamShieldContactSavedKey)
+    }
+
+    /// Create a CNMutableContact for Scam Shield with the email scan address
+    func createScamShieldContact(emailAddress: String) -> CNMutableContact {
+        let contact = CNMutableContact()
+        contact.givenName = "Scam Shield"
+        contact.organizationName = "Scam Shield"
+        contact.note = "Forward suspicious emails to this address for instant scam checking."
+
+        // Add email address
+        let email = CNLabeledValue(
+            label: CNLabelWork,
+            value: emailAddress as NSString
+        )
+        contact.emailAddresses = [email]
+
+        return contact
+    }
+
+    /// Save the Scam Shield contact directly (requires permission)
+    func saveScamShieldContact(emailAddress: String) async throws {
+        guard hasPermission else {
+            throw ContactSaveError.permissionDenied
+        }
+
+        let contact = createScamShieldContact(emailAddress: emailAddress)
+        let saveRequest = CNSaveRequest()
+        saveRequest.add(contact, toContainerWithIdentifier: nil)
+
+        try store.execute(saveRequest)
+
+        // Mark as saved
+        UserDefaults.standard.set(true, forKey: scamShieldContactSavedKey)
+    }
+
+    /// Check if a contact with email "scamshield.app" exists
+    func checkScamShieldContactExists() -> Bool {
+        guard hasPermission else { return false }
+
+        let predicate = CNContact.predicateForContacts(matchingName: "Scam Shield")
+        let keysToFetch: [CNKeyDescriptor] = [
+            CNContactEmailAddressesKey as CNKeyDescriptor,
+            CNContactGivenNameKey as CNKeyDescriptor
+        ]
+
+        do {
+            let contacts = try store.unifiedContacts(matching: predicate, keysToFetch: keysToFetch)
+            for contact in contacts {
+                for email in contact.emailAddresses {
+                    let emailString = email.value as String
+                    if emailString.contains("scamshield.app") {
+                        // Found it - update our saved flag
+                        UserDefaults.standard.set(true, forKey: scamShieldContactSavedKey)
+                        return true
+                    }
+                }
+            }
+        } catch {
+            #if DEBUG
+            print("❌ Error checking for Scam Shield contact: \(error)")
+            #endif
+        }
+
+        return false
+    }
+
+    /// Reset the saved flag (for testing)
+    func resetScamShieldContactSaved() {
+        UserDefaults.standard.set(false, forKey: scamShieldContactSavedKey)
+    }
+}
+
+enum ContactSaveError: LocalizedError {
+    case permissionDenied
+    case saveFailed(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .permissionDenied:
+            return "Please allow access to Contacts in Settings to save the Scam Shield contact."
+        case .saveFailed(let error):
+            return "Failed to save contact: \(error.localizedDescription)"
+        }
     }
 }
 

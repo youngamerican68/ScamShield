@@ -54,11 +54,32 @@ struct APIConfig {
     /// Request timeout in seconds
     static let requestTimeout: TimeInterval = 30
 
+    /// Scan history endpoint
+    static var scanHistoryURL: URL {
+        baseURL.appendingPathComponent("/api/scans")
+    }
+
+    // MARK: - Email Scan Address
+
+    /// User's unique email scan token (TODO: fetch from server after auth)
+    /// For prototype, using hardcoded test token
+    static var userScanToken: String {
+        // In production: fetch from user profile after auth
+        // For now: hardcoded test token
+        return "k9Xm2pL8nQ"
+    }
+
+    /// User's unique email scan address
+    static var emailScanAddress: String {
+        "u_\(userScanToken)@scamshield.app"
+    }
+
     /// For debugging - prints the current environment on app launch
     static func printCurrentEnvironment() {
         #if DEBUG
         print("🌐 API Environment: \(current.name)")
         print("🔗 Base URL: \(baseURL)")
+        print("📧 Email Scan Address: \(emailScanAddress)")
         #endif
     }
 }

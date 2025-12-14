@@ -1,5 +1,6 @@
 import SwiftUI
 import Contacts
+import ContactsUI
 
 /// ViewModel for Settings screen
 @MainActor
@@ -9,7 +10,18 @@ class SettingsViewModel: ObservableObject {
     @Published var contactsPermissionGranted: Bool = false
     @Published var isSyncing: Bool = false
 
+    // Email scanning state
+    @Published var isScamShieldContactSaved: Bool = false
+    @Published var isSavingContact: Bool = false
+    @Published var contactSaveError: String?
+    @Published var showContactSaveSuccess: Bool = false
+
     private let sharedDefaults = UserDefaults(suiteName: "group.com.scamshield.shared")
+
+    /// The user's unique email scan address
+    var emailScanAddress: String {
+        APIConfig.emailScanAddress
+    }
 
     // MARK: - SMS Filter Status
 
@@ -103,5 +115,69 @@ class SettingsViewModel: ObservableObject {
         sharedDefaults?.set(true, forKey: "smsFilterEnabled")
         isSMSFilterEnabled = true
         HapticManager.shared.success()
+    }
+
+    // MARK: - Email Scanning / Scam Shield Contact
+
+    /// Check if the Scam Shield contact is already saved
+    func checkScamShieldContactStatus() {
+        // First check our flag
+        isScamShieldContactSaved = ContactsManager.shared.isScamShieldContactSaved
+
+        // If permission granted, also verify the contact actually exists
+        if contactsPermissionGranted && !isScamShieldContactSaved {
+            isScamShieldContactSaved = ContactsManager.shared.checkScamShieldContactExists()
+        }
+    }
+
+    /// Save the Scam Shield contact to the user's contacts
+    func saveScamShieldContact() async {
+        isSavingContact = true
+        contactSaveError = nil
+
+        defer { isSavingContact = false }
+
+        // First ensure we have permission
+        if !contactsPermissionGranted {
+            let granted = await requestContactsPermissionForSave()
+            if !granted {
+                contactSaveError = "Please allow Contacts access to save the Scam Shield contact."
+                HapticManager.shared.error()
+                return
+            }
+        }
+
+        // Save the contact
+        do {
+            try await ContactsManager.shared.saveScamShieldContact(emailAddress: emailScanAddress)
+            isScamShieldContactSaved = true
+            showContactSaveSuccess = true
+            HapticManager.shared.success()
+
+            // Auto-dismiss success message after 3 seconds
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            showContactSaveSuccess = false
+        } catch {
+            contactSaveError = error.localizedDescription
+            HapticManager.shared.error()
+        }
+    }
+
+    /// Request contacts permission specifically for saving the contact
+    private func requestContactsPermissionForSave() async -> Bool {
+        let store = CNContactStore()
+        do {
+            let granted = try await store.requestAccess(for: .contacts)
+            contactsPermissionGranted = granted
+            return granted
+        } catch {
+            return false
+        }
+    }
+
+    /// Copy the email scan address to clipboard
+    func copyEmailAddress() {
+        UIPasteboard.general.string = emailScanAddress
+        HapticManager.shared.buttonTap()
     }
 }

@@ -34,7 +34,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSContactsUsageDescription</key>
-	<string>Scam Shield checks if messages are from your saved contacts to reduce false alarms. Your contacts are never stored or shared.</string>
+	<string>Scam Shield uses Contacts to: (1) save our email address so you can easily forward suspicious emails, and (2) check if messages are from saved contacts to reduce false alarms. Your contacts are never stored or shared.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

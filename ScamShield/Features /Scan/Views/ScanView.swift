@@ -8,6 +8,7 @@ struct ScanView: View {
     @Environment(\.scenePhase) private var scenePhase
     @FocusState private var isTextFieldFocused: Bool
     @State private var showSettings = false
+    @State private var showHistory = false
 
     // Clipboard tracking - persist across launches to avoid repeat prompting
     @AppStorage("pasteboardLastHandledChangeCount") private var lastHandledChangeCount: Int = 0
@@ -55,6 +56,15 @@ struct ScanView: View {
                 }
             }
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showHistory = true
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .foregroundColor(.cloud)
+                    }
+                }
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showSettings = true
@@ -67,6 +77,11 @@ struct ScanView: View {
             .sheet(isPresented: $showSettings) {
                 NavigationStack {
                     SettingsView()
+                }
+            }
+            .sheet(isPresented: $showHistory) {
+                NavigationStack {
+                    ScanHistoryView()
                 }
             }
         }
@@ -134,59 +149,65 @@ struct ScanView: View {
     // MARK: - Clipboard Banner (Primary CTA for elderly users)
 
     private var clipboardBannerView: some View {
-        VStack(spacing: 12) {
-            // Main scan button - state-dependent content
+        VStack(spacing: 14) {
+            // Main scan button - BIG and obvious for elderly users
+            // Minimum 56-64pt height for easy tapping
             Button {
                 scanFromClipboard()
             } label: {
-                HStack(spacing: 12) {
+                HStack(spacing: 14) {
                     switch clipboardBannerState {
                     case .ready:
                         Image(systemName: "doc.on.clipboard.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 28))
                         Text("Scan Message I Copied")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 20, weight: .bold))
 
                     case .scanning:
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .midnight))
+                            .scaleEffect(1.2)
                         Text("Scanning...")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 20, weight: .bold))
 
                     case .error:
                         Image(systemName: "exclamationmark.circle.fill")
-                            .font(.system(size: 24))
+                            .font(.system(size: 28))
                         Text("Try Again")
-                            .font(.system(size: 18, weight: .semibold))
+                            .font(.system(size: 20, weight: .bold))
                     }
                 }
                 .foregroundColor(.midnight)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .frame(minHeight: 60) // Minimum 60pt for elderly accessibility
+                .padding(.vertical, 4)
                 .background(clipboardBannerState == .error ? Color.verdictWarning : Color.sunrise)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .shadow(color: (clipboardBannerState == .error ? Color.verdictWarning : Color.sunrise).opacity(0.4), radius: 8, y: 4)
             }
             .disabled(clipboardBannerState == .scanning)
+            .accessibilityLabel(clipboardBannerState == .ready ? "Scan Message I Copied" : clipboardBannerState == .scanning ? "Scanning in progress" : "Try again")
+            .accessibilityHint("Double tap to scan the message you copied")
 
-            // State-dependent helper text
+            // State-dependent helper text - larger and higher contrast for readability
             switch clipboardBannerState {
             case .ready:
                 Text("Tip: In Messages, press and hold → Copy")
-                    .font(.system(size: 13))
-                    .foregroundColor(.cloud.opacity(0.6))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.cloud.opacity(0.85))
 
             case .scanning:
                 Text("Reading your copied message...")
-                    .font(.system(size: 13))
-                    .foregroundColor(.cloud.opacity(0.6))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.cloud.opacity(0.85))
 
             case .error:
                 Text("Couldn't read the copied text. Please copy again.")
-                    .font(.system(size: 13))
-                    .foregroundColor(.verdictWarning.opacity(0.8))
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.verdictWarning)
             }
 
-            // Dismiss option (small, secondary) - hidden during scanning
+            // "Not now" option (friendlier than "Dismiss") - hidden during scanning
             if clipboardBannerState != .scanning {
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) {
@@ -195,19 +216,25 @@ struct ScanView: View {
                         clipboardBannerState = .ready
                     }
                 } label: {
-                    Text("Dismiss")
+                    Text("Not now")
                         .font(.system(size: 14))
                         .foregroundColor(.cloud.opacity(0.5))
                 }
+                .accessibilityLabel("Not now")
+                .accessibilityHint("Hide this prompt. It will reappear when you copy a new message.")
             }
         }
-        .padding(16)
+        .padding(18)
         .background(
-            RoundedRectangle(cornerRadius: 20)
-                .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: 22)
+                .fill(Color.midnight.opacity(0.6))
+                .background(
+                    RoundedRectangle(cornerRadius: 22)
+                        .fill(.ultraThinMaterial)
+                )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke((clipboardBannerState == .error ? Color.verdictWarning : Color.sunrise).opacity(0.4), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 22)
+                        .stroke((clipboardBannerState == .error ? Color.verdictWarning : Color.sunrise).opacity(0.5), lineWidth: 1.5)
                 )
         )
     }
@@ -282,13 +309,15 @@ struct ScanView: View {
             },
             alignment: .topLeading
         )
+        // Subtly dim when clipboard banner is showing to focus attention on primary CTA
+        .opacity(showClipboardBanner ? 0.6 : 1.0)
     }
 
     // MARK: - Scan Button
 
     private var scanButtonSection: some View {
         PrimaryButton(
-            "Scan Now",
+            showClipboardBanner ? "Paste & Scan" : "Scan Now",
             icon: "magnifyingglass",
             isEnabled: viewModel.canScan
         ) {
@@ -296,6 +325,8 @@ struct ScanView: View {
                 await viewModel.startScan()
             }
         }
+        // Dim when clipboard banner is showing to reduce competing CTAs
+        .opacity(showClipboardBanner ? 0.4 : 1.0)
     }
 
     // MARK: - Trust Indicators
@@ -416,43 +447,39 @@ struct ScanView: View {
             return
         }
 
-        // Immediate visual feedback - show scanning state
+        // Immediate visual feedback - show scanning state BEFORE any work
         withAnimation(.easeOut(duration: 0.15)) {
             clipboardBannerState = .scanning
         }
 
-        let pb = UIPasteboard.general
-        lastHandledChangeCount = pb.changeCount
+        // Use Task to ensure UI updates before clipboard read
+        Task { @MainActor in
+            // Small delay to let "Scanning..." state render
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
 
-        // Debug logging
-        print("[Clipboard] hasStrings: \(pb.hasStrings)")
-        print("[Clipboard] changeCount: \(pb.changeCount)")
-        print("[Clipboard] string: \(pb.string ?? "nil")")
+            let pb = UIPasteboard.general
+            lastHandledChangeCount = pb.changeCount
 
-        // Read clipboard content ONLY after user explicitly taps
-        guard let text = pb.string,
-              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            print("[Clipboard] ERROR: Failed to read clipboard or empty content")
-            // Show error state with friendly message
-            withAnimation(.easeOut(duration: 0.2)) {
-                clipboardBannerState = .error
+            // Read clipboard content ONLY after user explicitly taps
+            guard let text = pb.string,
+                  !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                // Show error state with friendly message
+                withAnimation(.easeOut(duration: 0.2)) {
+                    clipboardBannerState = .error
+                }
+                return
             }
-            return
-        }
 
-        print("[Clipboard] SUCCESS: Read \(text.count) characters")
+            // Populate text field
+            viewModel.prePopulate(with: String(text.prefix(8000)), senderPhone: nil)
 
-        // Populate text field first
-        viewModel.prePopulate(with: String(text.prefix(8000)), senderPhone: nil)
+            // Hide banner to reveal the populated text field
+            withAnimation {
+                showClipboardBanner = false
+                clipboardBannerState = .ready
+            }
 
-        // Hide banner to reveal the populated text field
-        withAnimation {
-            showClipboardBanner = false
-            clipboardBannerState = .ready
-        }
-
-        // Give user 1.5 seconds to see their message before scanning
-        Task {
+            // Give user 1.5 seconds to see their message before scanning
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             await viewModel.startScan()
         }
