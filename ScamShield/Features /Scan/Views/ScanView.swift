@@ -15,6 +15,7 @@ struct ScanView: View {
     @AppStorage("pasteboardLastDismissedChangeCount") private var lastDismissedChangeCount: Int = 0
     @State private var showClipboardBanner = false
     @State private var clipboardBannerState: ClipboardBannerState = .ready
+    @State private var hasEnteredBackground = false
 
     private enum ClipboardBannerState {
         case ready
@@ -88,7 +89,8 @@ struct ScanView: View {
         .onAppear {
             viewModel.checkContactsPermission()
             handleSharedContent()
-            checkClipboardAvailability()
+            // Don't check clipboard on initial launch - only when returning from background
+            // This avoids the iOS paste permission prompt on every app open
         }
         .onChange(of: appState.sharedText) { newText in
             if newText != nil {
@@ -96,7 +98,10 @@ struct ScanView: View {
             }
         }
         .onChange(of: scenePhase) { newPhase in
-            if newPhase == .active {
+            if newPhase == .background || newPhase == .inactive {
+                hasEnteredBackground = true
+            } else if newPhase == .active && hasEnteredBackground {
+                // Only check clipboard when RETURNING from background, not on initial launch
                 checkClipboardAvailability()
             }
         }
@@ -160,7 +165,7 @@ struct ScanView: View {
                     case .ready:
                         Image(systemName: "doc.on.clipboard.fill")
                             .font(.system(size: 28))
-                        Text("Scan Message I Copied")
+                        Text("Scan Copied Message")
                             .font(.system(size: 20, weight: .bold))
 
                     case .scanning:
@@ -189,23 +194,6 @@ struct ScanView: View {
             .accessibilityLabel(clipboardBannerState == .ready ? "Scan Message I Copied" : clipboardBannerState == .scanning ? "Scanning in progress" : "Try again")
             .accessibilityHint("Double tap to scan the message you copied")
 
-            // State-dependent helper text - larger and higher contrast for readability
-            switch clipboardBannerState {
-            case .ready:
-                Text("Tip: In Messages, press and hold → Copy")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.cloud.opacity(0.85))
-
-            case .scanning:
-                Text("Reading your copied message...")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.cloud.opacity(0.85))
-
-            case .error:
-                Text("Couldn't read the copied text. Please copy again.")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundColor(.verdictWarning)
-            }
 
             // "Not now" option (friendlier than "Dismiss") - hidden during scanning
             if clipboardBannerState != .scanning {
@@ -243,16 +231,12 @@ struct ScanView: View {
 
     private var headerSection: some View {
         VStack(spacing: 12) {
-            // Shield Icon
-            Image(systemName: "shield.fill")
-                .font(.system(size: 56))
-                .foregroundStyle(AppGradients.sunriseToEmber)
-                .shadow(color: .sunrise.opacity(0.5), radius: 20)
-
-            // Title
-            Text("Scam Shield")
-                .font(AppTypography.sectionTitle)
-                .foregroundColor(.starlight)
+            // Owl Logo
+            Image("LaunchLogo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 200, height: 200)
+                .shadow(color: .sunrise.opacity(0.3), radius: 20)
 
             // Subtitle
             Text("Paste a suspicious message to scan")
@@ -405,7 +389,7 @@ struct ScanView: View {
         }
     }
 
-    // MARK: - Clipboard Detection (NO read on launch, just availability check)
+    // MARK: - Clipboard Detection (auto-scan after paste permission granted)
 
     private func checkClipboardAvailability() {
         // Don't check if we're not in idle state or already have text
@@ -429,11 +413,37 @@ struct ScanView: View {
             return
         }
 
-        // Show banner (without reading clipboard content yet)
-        withAnimation(.easeOut(duration: 0.3)) {
-            clipboardBannerState = .ready
-            showClipboardBanner = true
+        // Read clipboard - if user allows paste, auto-scan immediately
+        guard let clipboardText = UIPasteboard.general.string,
+              looksLikeScannableContent(clipboardText) else {
+            showClipboardBanner = false
+            return
         }
+
+        // User allowed paste and content looks like a message - auto-scan!
+        lastHandledChangeCount = currentChangeCount
+        viewModel.prePopulate(with: String(clipboardText.prefix(8000)), senderPhone: nil)
+
+        Task {
+            try? await Task.sleep(nanoseconds: 500_000_000) // Brief delay to show text
+            await viewModel.startScan()
+        }
+    }
+
+    /// Check if clipboard content looks like a message or email worth scanning
+    private func looksLikeScannableContent(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Minimum length - filter out single words, but allow short messages
+        guard trimmed.count >= 15 else { return false }
+
+        // Must have at least 2 words (filters out URLs, single words)
+        let words = trimmed.components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+        guard words.count >= 3 else { return false }
+
+        // If it has 3+ words and 15+ chars, it's probably a message worth scanning
+        return true
     }
 
     // MARK: - Scan from Clipboard (reads content only when user taps)

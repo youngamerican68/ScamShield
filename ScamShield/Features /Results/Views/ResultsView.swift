@@ -65,47 +65,54 @@ struct ResultsView: View {
     // MARK: - Verdict Card
 
     private var verdictCard: some View {
-        HStack(spacing: 16) {
-            // Left color bar
-            Rectangle()
-                .fill(result.verdict.color)
-                .frame(width: 6)
+        VStack(spacing: 16) {
+            // Mascot
+            MascotView(verdict: result.verdict, size: 140)
+                .shadow(color: result.verdict.color.opacity(0.3), radius: 20, y: 10)
 
-            VStack(alignment: .leading, spacing: 8) {
-                // Icon + Title
-                HStack(spacing: 12) {
-                    Image(systemName: result.verdict.icon)
-                        .font(.system(size: 36))
-                        .foregroundColor(result.verdict.color)
+            // Verdict info
+            HStack(spacing: 16) {
+                // Left color bar
+                Rectangle()
+                    .fill(result.verdict.color)
+                    .frame(width: 6)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(result.verdict.shortTitle)
-                            .font(AppTypography.verdictTitle)
-                            .foregroundColor(.starlight)
+                VStack(alignment: .leading, spacing: 8) {
+                    // Icon + Title
+                    HStack(spacing: 12) {
+                        Image(systemName: result.verdict.icon)
+                            .font(.system(size: 36))
+                            .foregroundColor(result.verdict.color)
 
-                        Text("Confidence: \(result.confidencePercent)")
-                            .font(AppTypography.caption)
-                            .foregroundColor(.cloud.opacity(0.7))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(result.verdict.shortTitle)
+                                .font(AppTypography.verdictTitle)
+                                .foregroundColor(.starlight)
+
+                            Text("Confidence: \(result.confidencePercent)")
+                                .font(AppTypography.caption)
+                                .foregroundColor(.cloud.opacity(0.7))
+                        }
                     }
+
+                    // Full title
+                    Text(result.verdict.title)
+                        .font(AppTypography.body)
+                        .foregroundColor(.cloud)
                 }
+                .padding(.vertical, 16)
 
-                // Full title
-                Text(result.verdict.title)
-                    .font(AppTypography.body)
-                    .foregroundColor(.cloud)
+                Spacer()
             }
-            .padding(.vertical, 16)
-
-            Spacer()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(result.verdict.color.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(result.verdict.color.opacity(0.3), lineWidth: 1)
+                    )
+            )
         }
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(result.verdict.color.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(result.verdict.color.opacity(0.3), lineWidth: 1)
-                )
-        )
     }
 
     // MARK: - Warning Banner

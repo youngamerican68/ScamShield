@@ -65,16 +65,16 @@ struct ScanHistoryView: View {
 
     private var emptyStateView: some View {
         VStack(spacing: 24) {
-            Image(systemName: "clock.badge.checkmark")
-                .font(.system(size: 60))
-                .foregroundStyle(AppGradients.sunriseToEmber)
+            // Owl mascot (idle/perched)
+            MascotView(mood: .idle, size: 160)
+                .shadow(color: .sunrise.opacity(0.2), radius: 20, y: 10)
 
             VStack(spacing: 8) {
                 Text("No Scans Yet")
                     .font(AppTypography.sectionTitle)
                     .foregroundColor(.starlight)
 
-                Text("Your scan history will appear here.\nForward a suspicious email or paste a message to get started.")
+                Text("I'm here to help protect you.\nForward a suspicious email or paste a message to get started.")
                     .font(AppTypography.body)
                     .foregroundColor(.cloud)
                     .multilineTextAlignment(.center)

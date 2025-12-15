@@ -11,24 +11,22 @@ struct ScanningView: View {
         VStack(spacing: 40) {
             Spacer()
 
-            // Animated Shield with Pulse Rings
+            // Animated Mascot with Pulse Rings
             ZStack {
                 // Pulse rings
                 ForEach(0..<3, id: \.self) { index in
                     Circle()
                         .stroke(Color.sunrise.opacity(0.3), lineWidth: 2)
-                        .frame(width: 120 + CGFloat(index * 40))
+                        .frame(width: 140 + CGFloat(index * 50))
                         .scaleEffect(pulseScale)
                         .opacity(2.0 - pulseScale)
                 }
 
-                // Shield icon
-                Image(systemName: "shield.lefthalf.filled")
-                    .font(.system(size: 64))
-                    .foregroundStyle(AppGradients.sunriseToEmber)
+                // Scanning owl mascot
+                MascotView(mood: .scanning, size: 140, animate: false)
                     .shadow(color: .sunrise.opacity(0.5), radius: 20)
             }
-            .frame(height: 200)
+            .frame(height: 220)
 
             // Phase Text with Shimmer
             Text(phase.rawValue)
