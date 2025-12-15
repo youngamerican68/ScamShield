@@ -230,20 +230,42 @@ struct ScanView: View {
     // MARK: - Header
 
     private var headerSection: some View {
-        VStack(spacing: 12) {
-            // Owl Logo
+        VStack(spacing: 4) {
+            // Owl Logo with glow
             Image("LaunchLogo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 200, height: 200)
-                .shadow(color: .sunrise.opacity(0.3), radius: 20)
+                .background(
+                    Circle()
+                        .fill(Color.sunrise.opacity(0.15))
+                        .frame(width: 180, height: 180)
+                        .blur(radius: 40)
+                )
+                .shadow(color: .sunrise.opacity(0.5), radius: 30, y: 5)
+
+            // Title
+            Text("Scam Shield")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.starlight)
+                .padding(.top, -20)
 
             // Subtitle
             Text("Paste a suspicious message to scan")
                 .font(AppTypography.body)
                 .foregroundColor(.cloud)
+
+            Text("or")
+                .font(.system(size: 14))
+                .foregroundColor(.cloud.opacity(0.5))
+
+            // Instructions
+            Text("In Messages: hold message → Copy → Open app and paste")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(.cloud.opacity(0.8))
+                .multilineTextAlignment(.center)
         }
-        .padding(.top, 20)
+        .padding(.top, 8)
         .padding(.bottom, 8)
     }
 
@@ -254,7 +276,7 @@ struct ScanView: View {
             VStack(alignment: .leading, spacing: 0) {
                 TextEditor(text: $viewModel.messageText)
                     .focused($isTextFieldFocused)
-                    .frame(minHeight: 120, maxHeight: 200)
+                    .frame(minHeight: 150, maxHeight: 250)
                     .scrollContentBackground(.hidden)
                     .background(Color.clear)
                     .font(AppTypography.body)
