@@ -149,6 +149,7 @@ struct ContentView: View {
         //     OnboardingView()
         // } else {
         ScanView()
+            .respectHighContrast()  // Apply high contrast mode app-wide
         // }
     }
 }

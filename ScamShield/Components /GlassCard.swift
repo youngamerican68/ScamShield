@@ -3,6 +3,8 @@ import SwiftUI
 /// Glassmorphism card component
 /// Replicates the glass effect from the web app
 struct GlassCard<Content: View>: View {
+    @Environment(\.highContrast) private var highContrast
+
     let content: Content
     var cornerRadius: CGFloat
     var padding: CGFloat
@@ -22,17 +24,23 @@ struct GlassCard<Content: View>: View {
             .padding(padding)
             .background(
                 ZStack {
-                    // Blur effect (ultraThinMaterial for dark mode)
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(.ultraThinMaterial)
+                    if highContrast {
+                        // High contrast: solid background, no blur
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(Color.midnight.opacity(0.95))
+                    } else {
+                        // Blur effect (ultraThinMaterial for dark mode)
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(.ultraThinMaterial)
+                    }
 
-                    // White overlay (8% opacity)
+                    // White overlay (8% opacity, or higher in high contrast)
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.glassWhite)
+                        .fill(Color.white.opacity(highContrast ? 0.12 : 0.08))
 
-                    // Border (15% white)
+                    // Border (higher opacity in high contrast for better definition)
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(Color.glassBorder, lineWidth: 1)
+                        .stroke(Color.white.opacity(highContrast ? 0.3 : 0.15), lineWidth: highContrast ? 1.5 : 1)
                 }
             )
             .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)

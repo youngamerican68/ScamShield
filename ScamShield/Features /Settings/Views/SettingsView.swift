@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = SettingsViewModel()
+    @AppStorage("highContrastEnabled") private var highContrastEnabled = false
 
     var body: some View {
         ZStack {
@@ -28,6 +29,9 @@ struct SettingsView: View {
 
                     // Trusted Contacts Card
                     trustedContactsCard
+
+                    // Accessibility Section
+                    accessibilitySection
 
                     // About Section
                     aboutSection
@@ -407,6 +411,47 @@ struct SettingsView: View {
                         .background(AppGradients.sunriseToEmber)
                         .cornerRadius(12)
                     }
+                }
+            }
+        }
+    }
+
+    // MARK: - Accessibility Section
+
+    private var accessibilitySection: some View {
+        GlassCard {
+            VStack(alignment: .leading, spacing: 16) {
+                // Title row
+                HStack {
+                    Image(systemName: "eye")
+                        .font(.title2)
+                        .foregroundStyle(AppGradients.sunriseToEmber)
+
+                    Text("Accessibility")
+                        .font(AppTypography.cardTitle)
+                        .foregroundColor(.starlight)
+                }
+
+                // High Contrast Toggle
+                Toggle(isOn: $highContrastEnabled) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("High Contrast Mode")
+                            .font(AppTypography.body)
+                            .foregroundColor(.starlight)
+                        Text("Makes text easier to read")
+                            .font(AppTypography.caption)
+                            .foregroundColor(.cloud)
+                    }
+                }
+                .tint(.sunrise)
+
+                // Info about system settings
+                HStack(spacing: 8) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.cloud.opacity(0.5))
+                    Text("iOS Accessibility settings are also respected")
+                        .font(AppTypography.caption)
+                        .foregroundColor(.cloud.opacity(0.7))
                 }
             }
         }

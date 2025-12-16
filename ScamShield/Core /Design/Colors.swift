@@ -57,3 +57,39 @@ struct AppColors {
     static let primaryText = Color.starlight
     static let secondaryText = Color.cloud
 }
+
+// MARK: - High Contrast Mode Support
+
+/// Environment key for high contrast mode
+struct HighContrastKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var highContrast: Bool {
+        get { self[HighContrastKey.self] }
+        set { self[HighContrastKey.self] = newValue }
+    }
+}
+
+/// View modifier to apply high contrast adjustments
+struct HighContrastModifier: ViewModifier {
+    @AppStorage("highContrastEnabled") private var highContrastEnabled = false
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var isHighContrast: Bool {
+        highContrastEnabled || reduceTransparency
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.highContrast, isHighContrast)
+    }
+}
+
+extension View {
+    /// Apply high contrast mode based on user settings and iOS accessibility
+    func respectHighContrast() -> some View {
+        modifier(HighContrastModifier())
+    }
+}
