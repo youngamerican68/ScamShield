@@ -6,7 +6,6 @@ struct ScanView: View {
     @StateObject private var viewModel = ScanViewModel()
     @EnvironmentObject var appState: AppState
     @Environment(\.scenePhase) private var scenePhase
-    @FocusState private var isTextFieldFocused: Bool
     @State private var showSettings = false
     @State private var showHistory = false
 
@@ -138,20 +137,22 @@ struct ScanView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
-                // Header
+                // Header (owl logo + title)
                 headerSection
 
-                // Permanent Paste from Clipboard button (always visible for elderly users)
+                // Step-by-step instructions in a card
+                howToCopySection
+
+                // Paste the Message button (primary action for elderly users)
                 pasteFromClipboardButton
 
-                // Divider
-                orTypeBelowDivider
+                // Message preview box (always visible so user sees where text goes)
+                messagePreviewBox
 
-                // Message Input
-                messageInputSection
-
-                // Scan Button
-                scanButtonSection
+                // Check Message button (shown after paste)
+                if !viewModel.messageText.isEmpty {
+                    scanButtonSection
+                }
 
                 // Trust Indicators
                 trustIndicators
@@ -161,9 +162,6 @@ struct ScanView: View {
             .padding(.bottom, 40) // Extra padding for safe area
         }
         .scrollBounceBehavior(.basedOnSize)
-        .onTapGesture {
-            isTextFieldFocused = false
-        }
     }
 
     // MARK: - Clipboard Banner (Primary CTA for elderly users)
@@ -251,7 +249,7 @@ struct ScanView: View {
             HStack(spacing: 12) {
                 Image(systemName: "doc.on.clipboard.fill")
                     .font(.system(size: 24))
-                Text("Paste from Clipboard")
+                Text("Paste the Message")
                     .font(.system(size: 18, weight: .semibold))
             }
             .foregroundColor(.midnight)
@@ -263,8 +261,8 @@ struct ScanView: View {
         }
         .opacity(clipboardHasText ? 1.0 : 0.4)
         .disabled(!clipboardHasText)
-        .accessibilityLabel("Paste from Clipboard")
-        .accessibilityHint(clipboardHasText ? "Double tap to paste copied text" : "No text in clipboard")
+        .accessibilityLabel("Paste the Message")
+        .accessibilityHint(clipboardHasText ? "Double tap to paste the message you copied" : "Copy a message first, then tap here")
     }
 
     private func pasteFromClipboardAction() {
@@ -272,28 +270,54 @@ struct ScanView: View {
             // Trim whitespace and limit to 8000 chars
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             viewModel.messageText = String(trimmed.prefix(8000))
-            HapticManager.shared.buttonTap()  // Soft haptic, less jarring for seniors
+            HapticManager.shared.buttonTap()
 
             // Hide the auto-scan banner if showing
             showClipboardBanner = false
             lastHandledChangeCount = UIPasteboard.general.changeCount
+
+            // Auto-detect known contacts from message
+            Task {
+                await viewModel.checkForKnownContact(messageText: viewModel.messageText)
+            }
         }
     }
 
-    // MARK: - Divider
+    // MARK: - Message Preview Box (always visible)
 
-    private var orTypeBelowDivider: some View {
-        HStack(spacing: 12) {
-            Rectangle()
-                .fill(Color.cloud.opacity(0.4))
-                .frame(height: 1)
-            Text("Or type it here")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.cloud.opacity(0.9))
-                .fixedSize()  // Prevent wrapping
-            Rectangle()
-                .fill(Color.cloud.opacity(0.4))
-                .frame(height: 1)
+    private var messagePreviewBox: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Message to check:")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.cloud)
+                Spacer()
+                if !viewModel.messageText.isEmpty {
+                    Button {
+                        viewModel.messageText = ""
+                        HapticManager.shared.buttonTap()
+                    } label: {
+                        Text("Clear")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.sunrise)
+                    }
+                }
+            }
+
+            GlassCard(padding: 16) {
+                if viewModel.messageText.isEmpty {
+                    Text("Your message will appear here...")
+                        .font(.system(size: 16))
+                        .foregroundColor(.cloud.opacity(0.5))
+                        .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
+                } else {
+                    Text(viewModel.messageText)
+                        .font(.system(size: 16))
+                        .foregroundColor(.starlight)
+                        .lineLimit(6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
         }
     }
 
@@ -301,120 +325,75 @@ struct ScanView: View {
 
     private var headerSection: some View {
         VStack(spacing: 4) {
-            // Owl Logo with glow
+            // Owl Logo with glow (reduced from 200 to 160 for space)
             Image("LaunchLogo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 200, height: 200)
+                .frame(width: 160, height: 160)
                 .background(
                     Circle()
                         .fill(Color.sunrise.opacity(0.15))
-                        .frame(width: 180, height: 180)
-                        .blur(radius: 40)
+                        .frame(width: 140, height: 140)
+                        .blur(radius: 35)
                 )
-                .shadow(color: .sunrise.opacity(0.5), radius: 30, y: 5)
+                .shadow(color: .sunrise.opacity(0.5), radius: 25, y: 4)
 
             // Title
             Text("Scam Shield")
-                .font(.system(size: 26, weight: .bold))
+                .font(.system(size: 24, weight: .bold))
                 .foregroundColor(.starlight)
-                .padding(.top, -12)
-
-            // Simplified instruction (one line since we have paste button)
-            Text("Copy a message, then tap Paste")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.cloud.opacity(0.9))
-                .multilineTextAlignment(.center)
+                .padding(.top, -8)
         }
     }
 
-    // MARK: - Message Input
+    // MARK: - How To Copy Instructions
 
-    private var messageInputSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            // Label above text box
-            Text("Message to check")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.cloud)
+    private var howToCopySection: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                // Header
+                Text("HOW TO CHECK A MESSAGE:")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.sunrise)
+                    .tracking(0.5)
 
-            GlassCard(padding: 0) {
-                ZStack(alignment: .topTrailing) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        TextEditor(text: $viewModel.messageText)
-                            .focused($isTextFieldFocused)
-                            .frame(minHeight: 100, maxHeight: 180)
-                            .scrollContentBackground(.hidden)
-                            .background(Color.clear)
-                            .font(AppTypography.body)
-                            .foregroundColor(.starlight)
-                            .padding()
-                            .padding(.trailing, 40) // Make room for paste button
-                            .onChange(of: viewModel.messageText) { newText in
-                                // Auto-detect contacts when text is pasted
-                                if !newText.isEmpty {
-                                    Task {
-                                        await viewModel.checkForKnownContact(messageText: newText)
-                                    }
-                                }
-                            }
+                // Step 1
+                HStack(alignment: .top, spacing: 12) {
+                    Text("1️⃣")
+                        .font(.system(size: 20))
+                    Text("Hold your finger on the suspicious message")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.cloud)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-                        // Character count
-                        HStack {
-                            Spacer()
-                            Text("\(viewModel.characterCount)/8000")
-                                .font(AppTypography.caption)
-                                .foregroundColor(viewModel.isOverLimit ? .verdictDanger : .cloud.opacity(0.5))
-                        }
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
-                    }
+                // Step 2
+                HStack(alignment: .top, spacing: 12) {
+                    Text("2️⃣")
+                        .font(.system(size: 20))
+                    Text("Tap \"Copy\" when menu appears")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.cloud)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
 
-                    // Small paste chip inside text area (top right) - clearer than icon alone
-                    if viewModel.messageText.isEmpty && clipboardHasText {
-                        Button {
-                            pasteFromClipboardAction()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "doc.on.clipboard")
-                                    .font(.system(size: 12))
-                                Text("Paste")
-                                    .font(.system(size: 13, weight: .semibold))
-                            }
-                            .foregroundColor(.sunrise)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.glassWhite)
-                            .clipShape(Capsule())
-                        }
-                        .contentShape(Rectangle())  // Expand tap target
-                        .frame(minWidth: 44, minHeight: 44)  // iOS minimum tap target
-                        .padding(8)
-                    }
+                // Step 3
+                HStack(alignment: .top, spacing: 12) {
+                    Text("3️⃣")
+                        .font(.system(size: 20))
+                    Text("Come back here and tap Paste")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.cloud)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .overlay(
-                Group {
-                    if viewModel.messageText.isEmpty {
-                        Text("Paste the message…")
-                            .font(AppTypography.body)
-                            .foregroundColor(.cloud.opacity(0.8))  // Higher contrast for older eyes + glare
-                            .padding()
-                            .padding(.top, 8)
-                            .allowsHitTesting(false)
-                    }
-                },
-                alignment: .topLeading
-            )
         }
-        // Subtly dim when clipboard banner is showing to focus attention on primary CTA
-        .opacity(showClipboardBanner ? 0.6 : 1.0)
     }
 
     // MARK: - Scan Button
 
     private var scanButtonSection: some View {
         VStack(spacing: 8) {
-            // More prominent Check Message button
             Button {
                 Task {
                     await viewModel.startScan()
@@ -426,31 +405,23 @@ struct ScanView: View {
                     Text("Check Message")
                         .font(.system(size: 19, weight: .bold))
                 }
-                .foregroundColor(viewModel.canScan ? .midnight : .cloud.opacity(0.5))
+                .foregroundColor(.midnight)
                 .frame(maxWidth: .infinity)
-                .frame(height: 58)  // Slightly taller than paste button
+                .frame(height: 58)
                 .background(
                     LinearGradient(
-                        colors: viewModel.canScan
-                            ? [Color.sunrise, Color.ember]  // Bright when enabled
-                            : [Color.cloud.opacity(0.3), Color.cloud.opacity(0.2)],  // Muted when disabled
+                        colors: [Color.sunrise, Color.ember],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
-                .shadow(color: viewModel.canScan ? Color.ember.opacity(0.5) : Color.clear, radius: 12, y: 6)
+                .shadow(color: Color.ember.opacity(0.5), radius: 12, y: 6)
             }
-            .disabled(!viewModel.canScan)
-            // Dim when clipboard banner is showing to reduce competing CTAs
-            .opacity(showClipboardBanner ? 0.4 : 1.0)
 
-            // Helper text - changes based on state to guide user
-            Text(viewModel.canScan
-                ? "We'll explain what looks risky and what to do next"
-                : "Paste or type a message to check")
+            Text("We'll explain what looks risky and what to do next")
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.cloud.opacity(viewModel.canScan ? 0.7 : 0.85))  // Higher contrast when guiding
+                .foregroundColor(.cloud.opacity(0.7))
                 .multilineTextAlignment(.center)
         }
     }
