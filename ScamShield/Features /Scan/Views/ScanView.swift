@@ -15,7 +15,6 @@ struct ScanView: View {
     @State private var showClipboardBanner = false
     @State private var clipboardBannerState: ClipboardBannerState = .ready
     @State private var hasEnteredBackground = false
-    @State private var clipboardHasText = false  // Reactive clipboard state
 
     private enum ClipboardBannerState {
         case ready
@@ -89,8 +88,6 @@ struct ScanView: View {
         .onAppear {
             viewModel.checkContactsPermission()
             handleSharedContent()
-            // Update clipboard availability (non-invasive check)
-            updateClipboardAvailability()
         }
         .onChange(of: appState.sharedText) { newText in
             if newText != nil {
@@ -101,9 +98,6 @@ struct ScanView: View {
             if newPhase == .background || newPhase == .inactive {
                 hasEnteredBackground = true
             } else if newPhase == .active {
-                // Update clipboard availability when app becomes active
-                updateClipboardAvailability()
-
                 // Only auto-scan clipboard when RETURNING from background, not on initial launch
                 if hasEnteredBackground {
                     checkClipboardAvailability()
@@ -113,7 +107,6 @@ struct ScanView: View {
         .onChange(of: viewModel.scanState) { newState in
             // Re-check clipboard when returning to idle (after "Scan Another")
             if case .idle = newState {
-                updateClipboardAvailability()
                 checkClipboardAvailability()
             }
         }
@@ -142,9 +135,6 @@ struct ScanView: View {
 
                 // Step-by-step instructions in a card
                 howToCopySection
-
-                // Paste the Message button (primary action for elderly users)
-                pasteFromClipboardButton
 
                 // Message preview box (always visible so user sees where text goes)
                 messagePreviewBox
@@ -240,57 +230,14 @@ struct ScanView: View {
         )
     }
 
-    // MARK: - Permanent Paste Button (Always Visible for Elderly Users)
-
-    private var pasteFromClipboardButton: some View {
-        Button {
-            pasteFromClipboardAction()
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "doc.on.clipboard.fill")
-                    .font(.system(size: 24))
-                Text("Paste the Message")
-                    .font(.system(size: 18, weight: .semibold))
-            }
-            .foregroundColor(.midnight)
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(Color.sunrise)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: Color.sunrise.opacity(0.3), radius: 8, y: 4)
-        }
-        .opacity(clipboardHasText ? 1.0 : 0.4)
-        .disabled(!clipboardHasText)
-        .accessibilityLabel("Paste the Message")
-        .accessibilityHint(clipboardHasText ? "Double tap to paste the message you copied" : "Copy a message first, then tap here")
-    }
-
-    private func pasteFromClipboardAction() {
-        if let text = UIPasteboard.general.string {
-            // Trim whitespace and limit to 8000 chars
-            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-            viewModel.messageText = String(trimmed.prefix(8000))
-            HapticManager.shared.buttonTap()
-
-            // Hide the auto-scan banner if showing
-            showClipboardBanner = false
-            lastHandledChangeCount = UIPasteboard.general.changeCount
-
-            // Auto-detect known contacts from message
-            Task {
-                await viewModel.checkForKnownContact(messageText: viewModel.messageText)
-            }
-        }
-    }
-
     // MARK: - Message Preview Box (always visible)
 
     private var messagePreviewBox: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Message to check:")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(.cloud)
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
                 Spacer()
                 if !viewModel.messageText.isEmpty {
                     Button {
@@ -298,7 +245,7 @@ struct ScanView: View {
                         HapticManager.shared.buttonTap()
                     } label: {
                         Text("Clear")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.sunrise)
                     }
                 }
@@ -307,13 +254,13 @@ struct ScanView: View {
             GlassCard(padding: 16) {
                 if viewModel.messageText.isEmpty {
                     Text("Your message will appear here...")
-                        .font(.system(size: 16))
-                        .foregroundColor(.cloud.opacity(0.5))
+                        .font(.system(size: 17))
+                        .foregroundColor(.cloud.opacity(0.6))
                         .frame(maxWidth: .infinity, minHeight: 80, alignment: .topLeading)
                 } else {
                     Text(viewModel.messageText)
-                        .font(.system(size: 16))
-                        .foregroundColor(.starlight)
+                        .font(.system(size: 17))
+                        .foregroundColor(.white)
                         .lineLimit(6)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -325,11 +272,8 @@ struct ScanView: View {
 
     private var headerSection: some View {
         VStack(spacing: 4) {
-            // Owl Logo with glow (reduced from 200 to 160 for space)
-            Image("LaunchLogo")
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 160, height: 160)
+            // Animated Owl Logo with glow
+            AnimatedOwlView(size: 160)
                 .background(
                     Circle()
                         .fill(Color.sunrise.opacity(0.15))
@@ -340,8 +284,8 @@ struct ScanView: View {
 
             // Title
             Text("Scam Shield")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.starlight)
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.white)
                 .padding(.top, -8)
         }
     }
@@ -349,41 +293,41 @@ struct ScanView: View {
     // MARK: - How To Copy Instructions
 
     private var howToCopySection: some View {
-        GlassCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 12) {
+        GlassCard(padding: 18) {
+            VStack(alignment: .leading, spacing: 14) {
                 // Header
                 Text("HOW TO CHECK A MESSAGE:")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.system(size: 16, weight: .bold))
                     .foregroundColor(.sunrise)
                     .tracking(0.5)
 
                 // Step 1
                 HStack(alignment: .top, spacing: 12) {
                     Text("1️⃣")
-                        .font(.system(size: 20))
+                        .font(.system(size: 24))
                     Text("Hold your finger on the suspicious message")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.cloud)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 // Step 2
                 HStack(alignment: .top, spacing: 12) {
                     Text("2️⃣")
-                        .font(.system(size: 20))
+                        .font(.system(size: 24))
                     Text("Tap \"Copy\" when menu appears")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.cloud)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
                 // Step 3
                 HStack(alignment: .top, spacing: 12) {
                     Text("3️⃣")
-                        .font(.system(size: 20))
-                    Text("Come back here and tap Paste")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.cloud)
+                        .font(.system(size: 24))
+                    Text("Come back here and tap Allow Paste")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -455,13 +399,13 @@ struct ScanView: View {
     }
 
     private func trustBadge(icon: String, text: String) -> some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 13))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.sunrise)
             Text(text)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.cloud)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.white)
                 .lineLimit(1)
         }
     }
@@ -518,13 +462,6 @@ struct ScanView: View {
                 await viewModel.startScan()
             }
         }
-    }
-
-    // MARK: - Clipboard State (Reactive)
-
-    /// Updates the clipboard availability state (non-invasive, doesn't read content)
-    private func updateClipboardAvailability() {
-        clipboardHasText = UIPasteboard.general.hasStrings
     }
 
     // MARK: - Clipboard Detection (auto-scan after paste permission granted)
