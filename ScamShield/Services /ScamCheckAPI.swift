@@ -61,7 +61,7 @@ actor ScamCheckAPI {
 
     // MARK: - Public Methods
 
-    /// Analyze a message for scam indicators
+    /// Analyze a message for scam indicators (uses /api/check-scam)
     /// - Parameter input: The scam check input containing the message and context
     /// - Returns: The analysis result with verdict and recommendations
     func checkScam(input: ScamCheckInput) async throws -> ScamCheckResult {
@@ -106,6 +106,73 @@ actor ScamCheckAPI {
             let decoder = JSONDecoder()
             return try decoder.decode(ScamCheckResult.self, from: data)
         } catch {
+            throw APIError.decodingError(error)
+        }
+    }
+
+    /// Create a text scan - analyzes and stores the result in history
+    /// Uses POST /api/scans endpoint which runs AI analysis and persists
+    /// - Parameter input: The scam check input containing the message and context
+    /// - Returns: The stored scan record (includes id, timestamp, etc.)
+    func createTextScan(input: ScamCheckInput) async throws -> ScanHistoryItem {
+        let url = APIConfig.scanHistoryURL  // POST /api/scans
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("ScamShield-iOS/1.0", forHTTPHeaderField: "User-Agent")
+
+        // Build request body
+        let body: [String: Any] = [
+            "text": input.text,
+            "fromKnownContact": input.fromKnownContact,
+            "contextWhoFor": input.contextWhoFor.rawValue
+        ]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        #if DEBUG
+        print("Creating text scan at: \(url)")
+        #endif
+
+        // Make request
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await session.data(for: request)
+        } catch let error as URLError where error.code == .timedOut {
+            throw APIError.timeout
+        } catch {
+            throw APIError.networkError(error)
+        }
+
+        // Validate response
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+
+        #if DEBUG
+        print("Text scan response status: \(httpResponse.statusCode)")
+        if let json = String(data: data, encoding: .utf8) {
+            print("Text scan response: \(json.prefix(500))")
+        }
+        #endif
+
+        // Handle HTTP errors
+        guard (200...299).contains(httpResponse.statusCode) else {
+            var errorMessage: String?
+            if let errorResponse = try? JSONDecoder().decode(ErrorResponse.self, from: data) {
+                errorMessage = errorResponse.message
+            }
+            throw APIError.serverError(statusCode: httpResponse.statusCode, message: errorMessage)
+        }
+
+        // Decode response as ScanHistoryItem
+        do {
+            let decoder = JSONDecoder()
+            return try decoder.decode(ScanHistoryItem.self, from: data)
+        } catch {
+            #if DEBUG
+            print("Decode error: \(error)")
+            #endif
             throw APIError.decodingError(error)
         }
     }

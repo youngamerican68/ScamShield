@@ -159,8 +159,11 @@ enum ScanPhase: String, CaseIterable {
 
 // MARK: - Scan History Models
 
-/// Source of the scan
+/// Source of the scan - unified to text or email
 enum ScanSource: String, Codable {
+    case text = "text"
+    case email = "email"
+    // Legacy support for old records
     case emailForward = "email_forward"
     case clipboard = "clipboard"
     case shareExtension = "share_extension"
@@ -168,41 +171,82 @@ enum ScanSource: String, Codable {
 
     var displayName: String {
         switch self {
-        case .emailForward: return "Email Forward"
-        case .clipboard: return "Clipboard"
-        case .shareExtension: return "Share"
-        case .manual: return "Manual"
+        case .text, .clipboard, .shareExtension, .manual:
+            return "Text"
+        case .email, .emailForward:
+            return "Email"
         }
     }
 
     var icon: String {
         switch self {
-        case .emailForward: return "envelope.fill"
-        case .clipboard: return "doc.on.clipboard.fill"
-        case .shareExtension: return "square.and.arrow.up.fill"
-        case .manual: return "keyboard.fill"
+        case .text, .clipboard, .shareExtension, .manual:
+            return "message.fill"
+        case .email, .emailForward:
+            return "envelope.fill"
+        }
+    }
+
+    /// Whether this is an email source (for filtering)
+    var isEmail: Bool {
+        switch self {
+        case .email, .emailForward: return true
+        default: return false
         }
     }
 }
 
-/// A scan record from the history API
+/// Status of a scan (processing or complete)
+enum ScanStatus: String, Codable {
+    case processing = "processing"
+    case complete = "complete"
+
+    /// Default to complete if not specified (backward compatibility)
+    static var defaultValue: ScanStatus { .complete }
+}
+
+/// A scan record from the history API (unified model)
 struct ScanHistoryItem: Codable, Identifiable {
     let id: String
     let userId: String
     let source: ScanSource
-    let subjectSnippet: String
-    let fromDomain: String
-    let messageId: String
+    // New unified fields
+    let title: String?          // Display title (subject for email, snippet for text)
+    let subtitle: String?       // "Pasted text" or fromDomain
+    // Legacy fields (for backward compatibility)
+    let subjectSnippet: String?
+    let fromDomain: String?
+    let messageId: String?
+    // Common fields
     let verdict: String
     let summary: String
     let tactics: [String]
     let safeSteps: [String]
     let confidence: Double
     let createdAt: String
+    // Status field (defaults to complete for backward compatibility)
+    let status: ScanStatus?
+
+    /// Computed status with default
+    var scanStatus: ScanStatus {
+        status ?? .complete
+    }
 
     /// Parse verdict string to ScamVerdict enum
     var verdictEnum: ScamVerdict {
         ScamVerdict(rawValue: verdict) ?? .suspicious
+    }
+
+    /// Parse createdAt string to Date (for relative time formatting)
+    var createdAtDate: Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: createdAt) {
+            return date
+        }
+        // Fallback without fractional seconds
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: createdAt)
     }
 
     /// Format the date for display
@@ -231,12 +275,31 @@ struct ScanHistoryItem: Codable, Identifiable {
         return createdAt
     }
 
-    /// Short preview of the subject/content
-    var previewText: String {
-        if subjectSnippet.isEmpty {
-            return "No subject"
+    /// Display title - uses new title field or falls back to legacy subjectSnippet
+    var displayTitle: String {
+        if let title = title, !title.isEmpty {
+            return title
         }
-        return subjectSnippet
+        if let snippet = subjectSnippet, !snippet.isEmpty {
+            return snippet
+        }
+        return source.isEmail ? "No subject" : "Pasted text"
+    }
+
+    /// Display subtitle - uses new subtitle field or falls back to legacy fromDomain
+    var displaySubtitle: String {
+        if let subtitle = subtitle, !subtitle.isEmpty {
+            return subtitle
+        }
+        if source.isEmail, let domain = fromDomain, !domain.isEmpty {
+            return domain
+        }
+        return source.displayName
+    }
+
+    /// Short preview of the subject/content (legacy compatibility)
+    var previewText: String {
+        displayTitle
     }
 }
 

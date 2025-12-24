@@ -34,13 +34,13 @@ struct GlassCard<Content: View>: View {
                             .fill(.ultraThinMaterial)
                     }
 
-                    // White overlay (8% opacity, or higher in high contrast)
+                    // Blue-tinted overlay for nocturne theme
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(Color.white.opacity(highContrast ? 0.12 : 0.08))
+                        .fill(Color.navyLight.opacity(highContrast ? 0.8 : 0.6))
 
-                    // Border (higher opacity in high contrast for better definition)
+                    // Border with subtle blue tint
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke(Color.white.opacity(highContrast ? 0.3 : 0.15), lineWidth: highContrast ? 1.5 : 1)
+                        .stroke(Color.cloud.opacity(highContrast ? 0.25 : 0.12), lineWidth: highContrast ? 1.5 : 1)
                 }
             )
             .shadow(color: .black.opacity(0.3), radius: 16, x: 0, y: 8)

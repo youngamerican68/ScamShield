@@ -206,21 +206,31 @@ struct ScanHistoryRow: View {
 
                 // Content
                 VStack(alignment: .leading, spacing: 4) {
-                    // Subject/preview
-                    Text(scan.previewText)
+                    // Title (subject for email, snippet for text)
+                    Text(scan.displayTitle)
                         .font(AppTypography.body)
                         .foregroundColor(.starlight)
                         .lineLimit(1)
 
-                    // Meta info
+                    // Meta info with source icon + subtitle
                     HStack(spacing: 8) {
-                        // Source
+                        // Source icon and type
                         HStack(spacing: 4) {
                             Image(systemName: scan.source.icon)
                             Text(scan.source.displayName)
                         }
                         .font(AppTypography.caption)
                         .foregroundColor(.cloud.opacity(0.7))
+
+                        // Dot separator
+                        Text("•")
+                            .foregroundColor(.cloud.opacity(0.5))
+
+                        // Subtitle (fromDomain for email, "Pasted text" for text)
+                        Text(scan.displaySubtitle)
+                            .font(AppTypography.caption)
+                            .foregroundColor(.cloud.opacity(0.7))
+                            .lineLimit(1)
 
                         // Dot separator
                         Text("•")
@@ -247,6 +257,8 @@ struct ScanHistoryRow: View {
                     )
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(scan.source.displayName) scan: \(scan.displayTitle). Verdict: \(scan.verdictEnum.shortTitle)")
     }
 }
 
@@ -406,7 +418,10 @@ struct ScanDetailView: View {
 
                 VStack(spacing: 8) {
                     metaRow(label: "Source", value: scan.source.displayName, icon: scan.source.icon)
-                    metaRow(label: "From Domain", value: scan.fromDomain.isEmpty ? "Unknown" : scan.fromDomain, icon: "globe")
+                    // Show fromDomain for email scans, subtitle for text scans
+                    if scan.source.isEmail {
+                        metaRow(label: "From Domain", value: scan.displaySubtitle, icon: "globe")
+                    }
                     metaRow(label: "Scanned", value: scan.formattedDate, icon: "clock")
                 }
             }
