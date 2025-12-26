@@ -24,7 +24,13 @@ struct ScanView: View {
 
     // Email mode state
     @AppStorage("hasSavedScamContact") private var hasSavedScamContact: Bool = false
+    @AppStorage("emailHelpExpanded") private var emailHelpExpanded: Bool = true
     @State private var showBackupAddress: Bool = false
+
+    // Computed: should steps be expanded by default?
+    private var shouldExpandStepsByDefault: Bool {
+        !hasSavedScamContact || !emailViewModel.hasEmailScans
+    }
 
     // Clipboard tracking - persist across launches to avoid repeat prompting
     @AppStorage("pasteboardLastHandledChangeCount") private var lastHandledChangeCount: Int = 0
@@ -248,15 +254,24 @@ struct ScanView: View {
         }
     }
 
-    // MARK: - Email Mode Content
+    // MARK: - Email Mode Content (State-Based Layout)
 
     private var emailModeContent: some View {
-        VStack(spacing: 16) {
-            // Combined setup + steps card
-            emailInstructionsCard
+        VStack(spacing: 14) {
+            if hasSavedScamContact {
+                // SETUP DONE: Status first (with primary button), then collapsed steps
+                emailStatusCardFull
 
-            // Status card
-            emailStatusCard
+                emailStepsCardCollapsible
+
+            } else {
+                // SETUP NEEDED: Setup first, steps second, compact status last
+                emailSetupCard
+
+                emailStepsCardExpanded
+
+                emailStatusCardCompact
+            }
 
             // Backup address link
             if !showBackupAddress {
@@ -267,9 +282,9 @@ struct ScanView: View {
                     }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: "questionmark.circle")
+                        Image(systemName: "envelope.badge.shield.half.filled")
                             .font(.system(size: 14))
-                        Text("Can't find the contact? Use email address instead")
+                        Text("Need the scan address instead?")
                             .font(.system(size: 14))
                     }
                     .foregroundColor(.cloud.opacity(0.6))
@@ -281,11 +296,6 @@ struct ScanView: View {
             if showBackupAddress {
                 backupAddressCard
             }
-
-            // Recent Email Scans (only if there are scans)
-            if emailViewModel.hasEmailScans {
-                recentEmailScansSection
-            }
         }
         .onAppear {
             Task {
@@ -294,6 +304,135 @@ struct ScanView: View {
             // Sync contact saved state from ViewModel to AppStorage
             if emailViewModel.isScamShieldContactSaved && !hasSavedScamContact {
                 hasSavedScamContact = true
+            }
+            // Set default expansion: collapsed when setup done, expanded when not
+            if !hasSavedScamContact && !emailHelpExpanded {
+                emailHelpExpanded = true
+            } else if hasSavedScamContact && emailHelpExpanded && emailViewModel.hasEmailScans {
+                // Auto-collapse steps after setup is done and user has scans
+                emailHelpExpanded = false
+            }
+        }
+    }
+
+    // MARK: - Email Setup Card (ONE-TIME SETUP)
+
+    private var emailSetupCard: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("ONE-TIME SETUP")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.sunrise)
+                    .tracking(0.5)
+
+                Text("Add Scam Shield to your contacts so you can quickly forward emails.")
+                    .font(.system(size: 15))
+                    .foregroundColor(.cloud.opacity(0.8))
+
+                if let error = emailViewModel.contactSaveError {
+                    Text(error)
+                        .font(.system(size: 14))
+                        .foregroundColor(.verdictDanger)
+                }
+
+                // Primary save button (ONLY filled/orange button when setup not done)
+                Button {
+                    Task {
+                        await emailViewModel.saveScamShieldContact()
+                        if emailViewModel.isScamShieldContactSaved {
+                            hasSavedScamContact = true
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if emailViewModel.isSavingContact {
+                            ProgressView()
+                                .tint(.midnight)
+                                .scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .font(.system(size: 18))
+                        }
+                        Text(emailViewModel.isSavingContact ? "Saving..." : "Add Scam Shield to Contacts")
+                            .font(.system(size: 17, weight: .bold))
+                    }
+                    .foregroundColor(.midnight)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(
+                        LinearGradient(
+                            colors: [Color.sunrise, Color.ember],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(12)
+                }
+                .disabled(emailViewModel.isSavingContact)
+                .accessibilityLabel("Add Scam Shield to Contacts")
+            }
+        }
+    }
+
+    // MARK: - Email Steps Card (Expanded - for setup flow)
+
+    private var emailStepsCardExpanded: some View {
+        GlassCard(padding: 16) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("EVERY TIME YOU FORWARD")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.cloud.opacity(0.6))
+                    .tracking(0.5)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    emailStepRow(number: "1", text: "Tap Forward in your email")
+                    emailStepRow(number: "2", text: "Type \"Scam\", select Scam Shield", highlight: "Scam")
+                    emailStepRow(number: "3", text: "Tap Send, then come back here")
+                }
+            }
+        }
+    }
+
+    // MARK: - Email Steps Card (Collapsible - for post-setup)
+
+    private var emailStepsCardCollapsible: some View {
+        GlassCard(padding: 14) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Header with expand/collapse
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        emailHelpExpanded.toggle()
+                        HapticManager.shared.buttonTap()
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 15))
+                            .foregroundColor(.cloud.opacity(0.5))
+
+                        Text("How to forward an email")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.cloud.opacity(0.7))
+
+                        Spacer()
+
+                        Image(systemName: emailHelpExpanded ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.cloud.opacity(0.4))
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(emailHelpExpanded ? "Hide steps" : "Show steps")
+
+                // Collapsible content
+                if emailHelpExpanded {
+                    VStack(alignment: .leading, spacing: 8) {
+                        emailStepRow(number: "1", text: "Tap Forward in your email")
+                        emailStepRow(number: "2", text: "Type \"Scam\", select Scam Shield", highlight: "Scam")
+                        emailStepRow(number: "3", text: "Tap Send, then come back here")
+                    }
+                    .padding(.top, 4)
+                }
             }
         }
     }
@@ -714,127 +853,6 @@ struct ScanView: View {
         }
     }
 
-    // MARK: - Email Instructions Card
-
-    private var emailInstructionsCard: some View {
-        GlassCard(padding: 16) {
-            VStack(alignment: .leading, spacing: 16) {
-                // ONE-TIME SETUP section
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("ONE-TIME SETUP")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.sunrise)
-                        .tracking(0.5)
-
-                    if hasSavedScamContact {
-                        // Compact done state
-                        HStack(spacing: 10) {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundColor(.verdictSafe)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Contact added")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundColor(.verdictSafe)
-                                Text("Now type \"Scam\" in the To: field")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.cloud.opacity(0.6))
-                            }
-
-                            Spacer()
-
-                            Button {
-                                Task {
-                                    await emailViewModel.saveScamShieldContact()
-                                }
-                            } label: {
-                                Text("Add again")
-                                    .font(.system(size: 13))
-                                    .foregroundColor(.cloud.opacity(0.5))
-                            }
-                            .accessibilityLabel("Add contact again")
-                        }
-                    } else {
-                        // Setup needed
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Add Scam Shield to your contacts so you can quickly forward emails.")
-                                .font(.system(size: 15))
-                                .foregroundColor(.cloud.opacity(0.8))
-
-                            if let error = emailViewModel.contactSaveError {
-                                Text(error)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.verdictDanger)
-                            }
-
-                            // Primary save button
-                            Button {
-                                Task {
-                                    await emailViewModel.saveScamShieldContact()
-                                    if emailViewModel.isScamShieldContactSaved {
-                                        hasSavedScamContact = true
-                                    }
-                                }
-                            } label: {
-                                HStack(spacing: 8) {
-                                    if emailViewModel.isSavingContact {
-                                        ProgressView()
-                                            .tint(.midnight)
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: "person.crop.circle.badge.plus")
-                                            .font(.system(size: 18))
-                                    }
-                                    Text(emailViewModel.isSavingContact ? "Saving..." : "Add Scam Shield to Contacts")
-                                        .font(.system(size: 17, weight: .bold))
-                                }
-                                .foregroundColor(.midnight)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 52)
-                                .background(
-                                    LinearGradient(
-                                        colors: [Color.sunrise, Color.ember],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(12)
-                            }
-                            .disabled(emailViewModel.isSavingContact)
-                            .accessibilityLabel("Add Scam Shield to Contacts")
-                        }
-                    }
-                }
-
-                // Divider
-                Rectangle()
-                    .fill(Color.glassBorder)
-                    .frame(height: 1)
-
-                // EVERY TIME section
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("EVERY TIME")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.cloud.opacity(0.5))
-                        .tracking(0.5)
-
-                    emailStepRow(number: "1", text: "In your email, tap Forward (the arrow)")
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        emailStepRow(number: "2", text: "Where it says \"To:\", type Scam", highlight: "Scam")
-                        Text("Scam Shield will appear from your contacts")
-                            .font(.system(size: 13))
-                            .foregroundColor(.cloud.opacity(0.6))
-                            .padding(.leading, 36)
-                    }
-
-                    emailStepRow(number: "3", text: "Tap Send, then reopen Scam Shield")
-                }
-            }
-        }
-    }
-
     private func emailStepRow(number: String, text: String, highlight: String? = nil) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Text(number)
@@ -859,9 +877,9 @@ struct ScanView: View {
         }
     }
 
-    // MARK: - Email Status Card
+    // MARK: - Email Status Card (Full - with primary button, for post-setup)
 
-    private var emailStatusCard: some View {
+    private var emailStatusCardFull: some View {
         GlassCard(padding: 16) {
             VStack(spacing: 14) {
                 // Header
@@ -923,7 +941,7 @@ struct ScanView: View {
                     Spacer()
                 }
 
-                // Check for Results button
+                // Primary "Check for Results" button
                 Button {
                     Task {
                         await emailViewModel.checkForNewScans()
@@ -933,7 +951,7 @@ struct ScanView: View {
                     HStack(spacing: 8) {
                         if emailViewModel.isLoadingScans {
                             ProgressView()
-                                .tint(hasSavedScamContact ? .midnight : .sunrise)
+                                .tint(.midnight)
                                 .scaleEffect(0.9)
                         } else {
                             Image(systemName: "arrow.clockwise")
@@ -942,34 +960,92 @@ struct ScanView: View {
                         Text(emailViewModel.isLoadingScans ? "Checking..." : "Check for Results")
                             .font(.system(size: 17, weight: .bold))
                     }
-                    .foregroundColor(hasSavedScamContact ? .midnight : .sunrise)
+                    .foregroundColor(.midnight)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
                     .background(
-                        Group {
-                            if hasSavedScamContact {
-                                LinearGradient(
-                                    colors: [Color.sunrise, Color.ember],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                )
-                            } else {
-                                Color.clear
-                            }
-                        }
-                    )
-                    .overlay(
-                        Group {
-                            if !hasSavedScamContact {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.sunrise, lineWidth: 2)
-                            }
-                        }
+                        LinearGradient(
+                            colors: [Color.sunrise, Color.ember],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
                     .cornerRadius(12)
                 }
                 .disabled(emailViewModel.isLoadingScans)
                 .accessibilityLabel("Check for results")
+            }
+        }
+    }
+
+    // MARK: - Email Status Card (Compact - with small refresh, for setup flow)
+
+    private var emailStatusCardCompact: some View {
+        GlassCard(padding: 14) {
+            HStack(spacing: 12) {
+                // Status icon (smaller)
+                ZStack {
+                    Circle()
+                        .fill(emailViewModel.isNewestScanProcessing ? Color.sunrise.opacity(0.2) : Color.glassWhite)
+                        .frame(width: 36, height: 36)
+
+                    if emailViewModel.isNewestScanProcessing {
+                        ProgressView()
+                            .tint(.sunrise)
+                            .scaleEffect(0.7)
+                    } else if emailViewModel.hasEmailScans {
+                        if let newest = emailViewModel.newestEmailScan {
+                            verdictIcon(for: newest.verdict)
+                                .scaleEffect(0.85)
+                        }
+                    } else {
+                        Image(systemName: "envelope.badge.clock")
+                            .font(.system(size: 16))
+                            .foregroundColor(.cloud.opacity(0.5))
+                    }
+                }
+
+                // Status text
+                VStack(alignment: .leading, spacing: 2) {
+                    if emailViewModel.hasEmailScans, let newest = emailViewModel.newestEmailScan {
+                        Text(verdictLabel(for: newest.verdict))
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(verdictColor(for: newest.verdict))
+                        Text("Received \(emailViewModel.newestScanRelativeTime)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.cloud.opacity(0.5))
+                    } else {
+                        Text("Waiting for your email...")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(.cloud.opacity(0.7))
+                    }
+                }
+
+                Spacer()
+
+                // Small refresh button (secondary)
+                Button {
+                    Task {
+                        await emailViewModel.checkForNewScans()
+                        HapticManager.shared.buttonTap()
+                    }
+                } label: {
+                    if emailViewModel.isLoadingScans {
+                        ProgressView()
+                            .tint(.sunrise)
+                            .scaleEffect(0.8)
+                            .frame(width: 36, height: 36)
+                    } else {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.sunrise)
+                            .frame(width: 36, height: 36)
+                            .background(Color.sunrise.opacity(0.15))
+                            .clipShape(Circle())
+                    }
+                }
+                .disabled(emailViewModel.isLoadingScans)
+                .accessibilityLabel("Refresh")
             }
         }
     }
@@ -1062,36 +1138,6 @@ struct ScanView: View {
         }
     }
 
-    // MARK: - Recent Email Scans Section
-
-    private var recentEmailScansSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Email Scans")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
-
-            ForEach(emailViewModel.recentEmailScans.prefix(3), id: \.id) { scan in
-                GlassCard(padding: 12) {
-                    HStack(spacing: 12) {
-                        verdictIcon(for: scan.verdict)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(scan.title ?? "Email scan")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-
-                            Text(scan.subtitle ?? scan.fromDomain ?? "Email")
-                                .font(.system(size: 13))
-                                .foregroundColor(.cloud.opacity(0.6))
-                        }
-
-                        Spacer()
-                    }
-                }
-            }
-        }
-    }
 }
 
 // MARK: - Preview
